@@ -1,4 +1,3 @@
-
 import React, { useState, useCallback } from 'react';
 import { useLocalStorage } from '../hooks/useLocalStorage';
 import { useTheme } from '../hooks/useTheme';
@@ -21,7 +20,7 @@ const SolverPage: React.FC = () => {
 
   const handleTextSolve = async () => {
     if (!inputValue.trim()) {
-      setError('Please enter a math problem.');
+      setError('Please enter a question.');
       return;
     }
     setError('');
@@ -73,7 +72,7 @@ const SolverPage: React.FC = () => {
           <textarea
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
-            placeholder="Type your math problem here... e.g., 'solve 2x + 5 = 15' or 'what is the integral of x^2?'"
+            placeholder="Type your question here... e.g., 'who was the first president of the USA?' or 'what is the integral of x^2?'"
             className="w-full p-4 border-2 border-slate-300 dark:border-slate-600 rounded-lg bg-slate-50 dark:bg-slate-800 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition h-40"
           />
           <button
@@ -81,7 +80,7 @@ const SolverPage: React.FC = () => {
             disabled={isLoading}
             className="mt-4 w-full bg-indigo-600 text-white font-bold py-3 px-6 rounded-lg hover:bg-indigo-700 transition disabled:bg-indigo-400 disabled:cursor-not-allowed"
           >
-            {isLoading ? 'Solving...' : 'Solve Problem'}
+            {isLoading ? 'Thinking...' : 'Get Answer'}
           </button>
         </div>
       )}
@@ -104,7 +103,7 @@ const SolverPage: React.FC = () => {
                     disabled={isLoading}
                     className="bg-indigo-600 text-white font-bold py-3 px-6 rounded-lg hover:bg-indigo-700 transition disabled:bg-indigo-400 disabled:cursor-not-allowed"
                 >
-                    {isLoading ? 'Solving...' : 'Solve from Whiteboard'}
+                    {isLoading ? 'Thinking...' : 'Solve from Whiteboard'}
                 </button>
             </div>
         </div>

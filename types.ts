@@ -1,7 +1,7 @@
 
 export type Theme = 'light' | 'dark';
 
-export type Page = 'Home' | 'Solver' | 'Practice' | 'Notes' | 'Settings';
+export type Page = 'Home' | 'Solver' | 'General AI' | 'Practice' | 'Notes' | 'Settings' | 'YouTube Summarizer' | 'Suggestions' | 'Profile';
 
 export interface NavItem {
   name: Page;
@@ -36,3 +36,8 @@ export interface Flashcard {
   front: string;
   back: string;
 }
+
+export type ChatMessage = {
+  role: 'user' | 'model';
+  content: string;
+};

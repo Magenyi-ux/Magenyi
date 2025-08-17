@@ -1,6 +1,6 @@
 {
-  "name": "QuickMath Tutor",
-  "description": "An AI-powered math tutor that solves problems, offers interactive practice quizzes, and helps you keep study notes. It features a text-based solver and an interactive whiteboard for handwritten problems.",
+  "name": "LearnSphere AI",
+  "description": "An AI-powered tutor that helps you with any educational topic. Get answers, practice with quizzes, and keep study notes. Features a text solver, an interactive whiteboard, and a voice assistant.",
   "requestFramePermissions": [
     "microphone"
   ]

@@ -1,3 +1,4 @@
+
 import React, { useState, useCallback, useEffect } from 'react';
 import { Page, Theme } from './types';
 import { NAV_ITEMS } from './constants';
@@ -6,9 +7,13 @@ import Header from './components/Header';
 import Sidebar from './components/Sidebar';
 import HomePage from './pages/HomePage';
 import SolverPage from './pages/SolverPage';
+import GeneralAiPage from './pages/GeneralAiPage';
 import PracticePage from './pages/PracticePage';
 import NotesPage from './pages/NotesPage';
+import YouTubeSummarizerPage from './pages/YouTubeSummarizerPage';
 import SettingsPage from './pages/SettingsPage';
+import SuggestionsPage from './pages/SuggestionsPage';
+import ProfilePage from './pages/ProfilePage';
 import FAB from './components/FAB';
 import VoiceAssistantModal from './components/VoiceAssistantModal';
 
@@ -29,12 +34,20 @@ export default function App() {
         return <HomePage navigate={navigate} />;
       case 'Solver':
         return <SolverPage />;
+      case 'General AI':
+        return <GeneralAiPage />;
       case 'Practice':
         return <PracticePage />;
       case 'Notes':
         return <NotesPage />;
+      case 'YouTube Summarizer':
+        return <YouTubeSummarizerPage />;
       case 'Settings':
         return <SettingsPage theme={theme} setTheme={setTheme} />;
+      case 'Suggestions':
+        return <SuggestionsPage />;
+      case 'Profile':
+        return <ProfilePage />;
       default:
         return <HomePage navigate={navigate} />;
     }

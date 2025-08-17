@@ -76,17 +76,22 @@ const NoteItem: React.FC<NoteItemProps> = ({ note, onDelete, onGenerateQuiz, onG
     const [isExpanded, setIsExpanded] = useState(false);
 
     const formatContent = (text: string) => {
-      const parts = text.split(/(\`\`\`[\s\S]*?\`\`\`|\*\*.*?\*\*)/g);
-      return parts.map((part, index) => {
-        if (part.startsWith('```') && part.endsWith('```')) {
-          return <pre key={index} className="bg-slate-100 dark:bg-slate-700 p-2 rounded-md my-1 text-base font-semibold text-green-600 dark:text-green-400 whitespace-pre-wrap">{part.slice(3, -3).trim()}</pre>;
-        }
-        if (part.startsWith('**') && part.endsWith('**')) {
-          return <strong key={index}>{part.slice(2, -2)}</strong>;
-        }
-        return part;
-      });
-    };
+        const parts = text.split(/(\`\`\`[\s\S]*?\`\`\`|\*\*.*?\*\*|!\[.*?\]\(.*?\))/g);
+        return parts.map((part, index) => {
+          if (!part) return null;
+          if (part.startsWith('```') && part.endsWith('```')) {
+            return <pre key={index} className="bg-slate-100 dark:bg-slate-700 p-2 rounded-md my-1 text-base font-semibold text-green-600 dark:text-green-400 whitespace-pre-wrap">{part.slice(3, -3).trim()}</pre>;
+          }
+          if (part.startsWith('**') && part.endsWith('**')) {
+            return <strong key={index}>{part.slice(2, -2)}</strong>;
+          }
+          const imageMatch = part.match(/!\[(.*?)\]\((.*?)\)/);
+          if (imageMatch) {
+              return <img key={index} src={imageMatch[2]} alt={imageMatch[1]} className="my-4 rounded-lg shadow-md max-w-full mx-auto" />;
+          }
+          return part.split('\n').map((line, i) => <span key={`${index}-${i}`}>{line}<br/></span>);
+        });
+      };
 
     return (
         <div className="bg-white dark:bg-slate-800 rounded-lg shadow-md mb-4 overflow-hidden">
@@ -124,14 +129,20 @@ const NotesPage: React.FC = () => {
     const [isListening, setIsListening] = useState(false);
     const [transcript, setTranscript] = useState('');
     const [isLoading, setIsLoading] = useState(false);
-
     const [activeQuizNoteId, setActiveQuizNoteId] = useState<string | null>(null);
     const [activeFlashcardsNoteId, setActiveFlashcardsNoteId] = useState<string | null>(null);
     const [generatedQuiz, setGeneratedQuiz] = useState<QuizQuestion[] | null>(null);
     const [generatedFlashcards, setGeneratedFlashcards] = useState<Flashcard[] | null>(null);
     const [isAiFeatureLoading, setIsAiFeatureLoading] = useState(false);
 
+    const [isLoadingFile, setIsLoadingFile] = useState(false);
+    const [videoFileForDescription, setVideoFileForDescription] = useState<File | null>(null);
+    const [videoDescription, setVideoDescription] = useState('');
+    const [isLoadingVideoNote, setIsLoadingVideoNote] = useState(false);
+
     const recognitionRef = useRef<any>(null);
+    const fileInputRef = useRef<HTMLInputElement>(null);
+    const videoInputRef = useRef<HTMLInputElement>(null);
 
     const handleStartListening = () => {
         const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
@@ -220,28 +231,122 @@ const NotesPage: React.FC = () => {
         setIsAiFeatureLoading(false);
     };
 
+    const handleImportFileClick = () => fileInputRef.current?.click();
+    const handleImportVideoClick = () => videoInputRef.current?.click();
+
+    const handleFileImport = async (event: React.ChangeEvent<HTMLInputElement>) => {
+        const file = event.target.files?.[0];
+        if (!file) return;
+        setIsLoadingFile(true);
+
+        const reader = new FileReader();
+        reader.onload = async (e) => {
+            const content = e.target?.result as string;
+            if (content) {
+                const optimizedContent = await optimizeNote(content);
+                const newNote: Note = {
+                    id: new Date().toISOString(),
+                    title: `Imported Note: ${file.name}`,
+                    content: optimizedContent,
+                    rawContent: content,
+                    subject: 'General',
+                    timestamp: Date.now(),
+                };
+                setNotes(prev => [newNote, ...prev]);
+            }
+            setIsLoadingFile(false);
+        };
+        reader.onerror = () => {
+            console.error("Failed to read file");
+            alert("Failed to read the selected file.");
+            setIsLoadingFile(false);
+        }
+        reader.readAsText(file);
+        event.target.value = '';
+    };
+
+    const handleVideoImport = (event: React.ChangeEvent<HTMLInputElement>) => {
+        const file = event.target.files?.[0];
+        if (!file) return;
+        setVideoFileForDescription(file);
+        event.target.value = '';
+    };
+    
+    const handleCreateVideoNote = async () => {
+        if (!videoDescription.trim() || !videoFileForDescription) return;
+        setIsLoadingVideoNote(true);
+        const optimizedContent = await optimizeNote(videoDescription);
+
+        const newNote: Note = {
+            id: new Date().toISOString(),
+            title: `Video Note: ${videoFileForDescription.name}`,
+            content: optimizedContent,
+            rawContent: videoDescription,
+            subject: 'General',
+            timestamp: Date.now(),
+        };
+        setNotes(prev => [newNote, ...prev]);
+        handleCancelVideoNote();
+        setIsLoadingVideoNote(false);
+    };
+
+    const handleCancelVideoNote = () => {
+        setVideoFileForDescription(null);
+        setVideoDescription('');
+    };
+
     return (
         <div className="max-w-4xl mx-auto">
             <h2 className="text-3xl font-bold mb-6 text-center">My Study Notes</h2>
 
-            {/* AI Note Creator */}
             <div className="bg-white dark:bg-slate-800 p-6 rounded-lg shadow-md mb-8">
                 <h3 className="text-xl font-bold mb-2">AI Note Taker</h3>
-                <p className="text-slate-600 dark:text-slate-400 mb-4">Click 'Start Listening' and dictate your notes. The AI will transcribe and organize them for you.</p>
+                <p className="text-slate-600 dark:text-slate-400 mb-4">Dictate your notes, import a text file, or add a note for a video.</p>
                 {isListening && (
                     <textarea value={transcript} readOnly className="w-full h-32 p-2 border rounded-md bg-slate-100 dark:bg-slate-700 mb-4" placeholder="Listening..." />
                 )}
-                <div className="flex gap-4">
+                <div className="flex flex-wrap gap-4">
                     {!isListening ? (
-                        <button onClick={handleStartListening} className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-lg transition">Start Listening</button>
+                        <button onClick={handleStartListening} disabled={isLoadingFile || isLoading} className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-lg transition disabled:bg-indigo-400">Start Listening</button>
                     ) : (
                         <button onClick={handleFinishListening} disabled={isLoading} className="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg transition flex items-center gap-2 disabled:bg-red-400">
                            {isLoading && <LoadingSpinner />}
                            {isLoading ? 'Optimizing...' : 'Finish & Optimize Note'}
                         </button>
                     )}
+                     <button onClick={handleImportFileClick} disabled={isLoadingFile || isListening || isLoading} className="bg-teal-600 hover:bg-teal-700 text-white font-bold py-2 px-4 rounded-lg transition flex items-center gap-2 disabled:bg-teal-400">
+                        {isLoadingFile && <LoadingSpinner />}
+                        {isLoadingFile ? 'Importing...' : 'Import Text File'}
+                     </button>
+                     <button onClick={handleImportVideoClick} disabled={isLoadingFile || isListening || isLoading} className="bg-sky-600 hover:bg-sky-700 text-white font-bold py-2 px-4 rounded-lg transition disabled:bg-sky-400">
+                         Add Video Note
+                     </button>
                 </div>
+                 <input type="file" ref={fileInputRef} onChange={handleFileImport} style={{ display: 'none' }} accept=".txt,.md" />
+                <input type="file" ref={videoInputRef} onChange={handleVideoImport} style={{ display: 'none' }} accept="video/*" />
             </div>
+
+            {videoFileForDescription && (
+                <div className="bg-white dark:bg-slate-800 p-6 rounded-lg shadow-md mb-8 transition-all animate-fade-in">
+                    <h3 className="text-xl font-bold mb-2">Create Note for "{videoFileForDescription.name}"</h3>
+                    <p className="text-slate-600 dark:text-slate-400 mb-4">Describe the key points or summary of the video. The AI will structure it into a clean note.</p>
+                    <textarea
+                        value={videoDescription}
+                        onChange={(e) => setVideoDescription(e.target.value)}
+                        className="w-full h-32 p-2 border rounded-md bg-slate-100 dark:bg-slate-700 mb-4 focus:ring-2 focus:ring-indigo-500"
+                        placeholder="e.g., 'This video explains the quadratic formula, how to derive it, and provides two examples...'"
+                    />
+                    <div className="flex gap-4">
+                        <button onClick={handleCreateVideoNote} disabled={isLoadingVideoNote || !videoDescription.trim()} className="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg transition flex items-center gap-2 disabled:bg-green-400">
+                            {isLoadingVideoNote && <LoadingSpinner />}
+                            {isLoadingVideoNote ? 'Creating...' : 'Create Note'}
+                        </button>
+                        <button onClick={handleCancelVideoNote} className="bg-slate-500 hover:bg-slate-600 text-white font-bold py-2 px-4 rounded-lg transition">
+                            Cancel
+                        </button>
+                    </div>
+                </div>
+            )}
 
             {notes.length > 0 ? (
                 <div>

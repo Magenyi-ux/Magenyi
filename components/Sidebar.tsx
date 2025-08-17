@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { NavItem, Page } from '../types';
 
@@ -25,7 +24,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, navItems, currentPag
         }`}
       >
         <div className="p-4 border-b border-slate-200 dark:border-slate-700">
-          <h2 className="text-2xl font-bold text-indigo-600 dark:text-indigo-400">QuickMath Tutor</h2>
+          <h2 className="text-2xl font-bold text-indigo-600 dark:text-indigo-400">LearnSphere AI</h2>
         </div>
         <nav className="mt-4">
           <ul>
