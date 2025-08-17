@@ -1,0 +1,7 @@
+{
+  "name": "QuickMath Tutor",
+  "description": "An AI-powered math tutor that solves problems, offers interactive practice quizzes, and helps you keep study notes. It features a text-based solver and an interactive whiteboard for handwritten problems.",
+  "requestFramePermissions": [
+    "microphone"
+  ]
+}
