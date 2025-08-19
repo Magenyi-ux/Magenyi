@@ -1,7 +1,9 @@
+
 import React, { useState } from 'react';
 import { useLocalStorage } from '../hooks/useLocalStorage';
 import { Note } from '../types';
 import { summarizeYouTubeURL } from '../services/geminiService';
+import { useActivityLogger } from '../hooks/useActivityLogger';
 
 const LoadingSpinner = () => <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>;
 
@@ -12,6 +14,7 @@ const YouTubeSummarizerPage: React.FC = () => {
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState('');
     const [resultTitle, setResultTitle] = useState('');
+    const { logActivity } = useActivityLogger();
 
     const handleSummarize = async () => {
         if (!url.trim() || !(url.includes('youtube.com') || url.includes('youtu.be'))) {
@@ -49,6 +52,7 @@ const YouTubeSummarizerPage: React.FC = () => {
         };
 
         setNotes([newNote, ...notes]);
+        logActivity('YOUTUBE_SUMMARY_SAVED', { title: newNote.title.substring(0, 50) });
         alert("Summary saved to your notes!");
     };
     

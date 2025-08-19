@@ -4,6 +4,7 @@ import React from 'react';
 interface SolutionDisplayProps {
   solution: string;
   isLoading: boolean;
+  image?: string | null;
 }
 
 const LoadingSpinner = () => (
@@ -12,7 +13,7 @@ const LoadingSpinner = () => (
   </div>
 );
 
-const SolutionDisplay: React.FC<SolutionDisplayProps> = ({ solution, isLoading }) => {
+const SolutionDisplay: React.FC<SolutionDisplayProps> = ({ solution, isLoading, image }) => {
   const formatSolution = (text: string) => {
     const parts = text.split(/(\`\`\`[\s\S]*?\`\`\`|\*\*.*?\*\*)/g);
     return parts.map((part, index) => {
@@ -33,6 +34,14 @@ const SolutionDisplay: React.FC<SolutionDisplayProps> = ({ solution, isLoading }
   return (
     <div className="w-full bg-white dark:bg-slate-800 rounded-lg shadow-lg p-6 min-h-[200px] mt-6">
       <h3 className="text-xl font-bold mb-4 border-b border-slate-200 dark:border-slate-700 pb-2">Solution</h3>
+      
+      {image && !isLoading && (
+        <div className="mb-4 p-2 border border-slate-200 dark:border-slate-700 rounded-lg bg-slate-50 dark:bg-slate-900">
+            <p className="text-sm font-semibold text-slate-600 dark:text-slate-400 mb-2">Your Drawing:</p>
+            <img src={image} alt="User's drawing from whiteboard" className="w-full h-auto rounded-md" style={{ background: 'white' }} />
+        </div>
+      )}
+
       {isLoading ? (
         <LoadingSpinner />
       ) : solution ? (

@@ -2,7 +2,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useLocalStorage } from '../hooks/useLocalStorage';
 import { ChatMessage } from '../types';
-import { getGeneralChatResponse } from '../services/geminiService';
+import { getAiTutorResponse } from '../services/geminiService';
+import { useActivityLogger } from '../hooks/useActivityLogger';
 
 const SendIcon = () => (
   <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -34,11 +35,12 @@ const MarkdownRenderer: React.FC<{ content: string }> = ({ content }) => {
 };
 
 
-const GeneralAiPage: React.FC = () => {
-  const [messages, setMessages] = useLocalStorage<ChatMessage[]>('general-chat-history', []);
+const AiTutorPage: React.FC = () => {
+  const [messages, setMessages] = useLocalStorage<ChatMessage[]>('ai-tutor-chat-history', []);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const { logActivity } = useActivityLogger();
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -54,6 +56,7 @@ const GeneralAiPage: React.FC = () => {
 
     const userMessage: ChatMessage = { role: 'user', content: input };
     setMessages(prev => [...prev, userMessage]);
+    logActivity('CHAT_MESSAGE_SENT');
     setInput('');
     setIsLoading(true);
 
@@ -62,7 +65,7 @@ const GeneralAiPage: React.FC = () => {
       parts: [{ text: msg.content }],
     }));
 
-    const aiResponseContent = await getGeneralChatResponse(input, historyForApi as any);
+    const aiResponseContent = await getAiTutorResponse(input, historyForApi as any);
     const aiMessage: ChatMessage = { role: 'model', content: aiResponseContent };
     
     setMessages(prev => [...prev, aiMessage]);
@@ -79,7 +82,7 @@ const GeneralAiPage: React.FC = () => {
   return (
     <div className="flex flex-col h-full max-w-4xl mx-auto bg-white dark:bg-slate-800 rounded-lg shadow-lg">
       <div className="p-4 border-b border-slate-200 dark:border-slate-700 flex justify-between items-center">
-        <h2 className="text-xl font-bold">General AI Chat</h2>
+        <h2 className="text-xl font-bold">AI Tutor</h2>
         <button 
             onClick={handleClearChat}
             className="text-sm bg-red-500 hover:bg-red-600 text-white font-semibold py-1 px-3 rounded-md transition disabled:opacity-50"
@@ -143,4 +146,4 @@ const GeneralAiPage: React.FC = () => {
   );
 };
 
-export default GeneralAiPage;
+export default AiTutorPage;

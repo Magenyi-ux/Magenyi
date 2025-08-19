@@ -1,18 +1,20 @@
 
 import React from 'react';
 import { useLocalStorage } from '../hooks/useLocalStorage';
-import { Note, PracticeStats } from '../types';
+import { Note, UserStats } from '../types';
 
-const INITIAL_STATS: PracticeStats = {
+const INITIAL_STATS: UserStats = {
   score: 0,
   streak: 0,
   questionsAttempted: 0,
   correctAnswers: 0,
+  xp: 0,
 };
 
 const ProfilePage: React.FC = () => {
     const [notes] = useLocalStorage<Note[]>('notes', []);
-    const [stats] = useLocalStorage<PracticeStats>('practiceStats', INITIAL_STATS);
+    const [stats] = useLocalStorage<UserStats>('userStats', INITIAL_STATS);
+    const level = Math.floor(stats.xp / 100) + 1;
 
     return (
         <div className="max-w-2xl mx-auto">
@@ -33,6 +35,14 @@ const ProfilePage: React.FC = () => {
                 <div className="w-full text-left">
                      <h4 className="text-xl font-semibold mb-4">My Stats</h4>
                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div className="bg-slate-100 dark:bg-slate-700 p-4 rounded-lg">
+                            <p className="text-sm text-slate-500 dark:text-slate-400">Current Level</p>
+                            <p className="text-2xl font-bold">{level}</p>
+                        </div>
+                        <div className="bg-slate-100 dark:bg-slate-700 p-4 rounded-lg">
+                            <p className="text-sm text-slate-500 dark:text-slate-400">Total XP</p>
+                            <p className="text-2xl font-bold">{stats.xp}</p>
+                        </div>
                         <div className="bg-slate-100 dark:bg-slate-700 p-4 rounded-lg">
                             <p className="text-sm text-slate-500 dark:text-slate-400">Total Notes Created</p>
                             <p className="text-2xl font-bold">{notes.length}</p>

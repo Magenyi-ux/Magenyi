@@ -1,14 +1,18 @@
 
+
 import React, { useState, useEffect, useCallback } from 'react';
 import { useLocalStorage } from '../hooks/useLocalStorage';
 import { generateQuizQuestion } from '../services/geminiService';
-import { QuizQuestion, PracticeStats } from '../types';
+import { QuizQuestion, UserStats } from '../types';
+import XpGainToast from '../components/XpGainToast';
+import { useActivityLogger } from '../hooks/useActivityLogger';
 
-const INITIAL_STATS: PracticeStats = {
+const INITIAL_STATS: UserStats = {
   score: 0,
   streak: 0,
   questionsAttempted: 0,
   correctAnswers: 0,
+  xp: 0,
 };
 
 const StatCard: React.FC<{ label: string; value: string | number; icon: string }> = ({ label, value, icon }) => (
@@ -23,12 +27,14 @@ const StatCard: React.FC<{ label: string; value: string | number; icon: string }
 
 
 const PracticePage: React.FC = () => {
-    const [stats, setStats] = useLocalStorage<PracticeStats>('practiceStats', INITIAL_STATS);
+    const [stats, setStats] = useLocalStorage<UserStats>('userStats', INITIAL_STATS);
     const [quiz, setQuiz] = useState<QuizQuestion | null>(null);
     const [isLoading, setIsLoading] = useState(false);
     const [feedback, setFeedback] = useState('');
     const [selectedOption, setSelectedOption] = useState<string | null>(null);
     const [isAnswered, setIsAnswered] = useState(false);
+    const [showXpToast, setShowXpToast] = useState(false);
+    const { logActivity } = useActivityLogger();
     
     const fetchNewQuestion = useCallback(async () => {
         setIsLoading(true);
@@ -52,14 +58,19 @@ const PracticePage: React.FC = () => {
         
         setSelectedOption(option);
         setIsAnswered(true);
+        const isCorrect = option === quiz?.correctAnswer;
         
+        logActivity('PRACTICE_ANSWER', { correct: isCorrect, question: quiz?.question.substring(0, 50) });
+
         setStats(prevStats => {
-            const newStats = { ...prevStats, questionsAttempted: prevStats.questionsAttempted + 1 };
-            if (option === quiz?.correctAnswer) {
+            const newStats: UserStats = { ...prevStats, questionsAttempted: prevStats.questionsAttempted + 1 };
+            if (isCorrect) {
                 setFeedback('Correct! Well done.');
                 newStats.correctAnswers += 1;
                 newStats.score += 10;
                 newStats.streak += 1;
+                newStats.xp += 10; // Award XP
+                setShowXpToast(true);
             } else {
                 setFeedback(`Not quite. The correct answer was: ${quiz?.correctAnswer}`);
                 newStats.streak = 0;
@@ -125,6 +136,7 @@ const PracticePage: React.FC = () => {
                     </button>
                 </div>
             )}
+            <XpGainToast show={showXpToast} xp={10} onClose={() => setShowXpToast(false)} />
         </div>
     );
 };

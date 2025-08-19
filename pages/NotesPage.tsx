@@ -1,369 +1,250 @@
-
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { useLocalStorage } from '../hooks/useLocalStorage';
-import { Note, QuizQuestion, Flashcard } from '../types';
-import { optimizeNote, generateQuizFromNote, generateFlashcardsFromNote } from '../services/geminiService';
+import { Note, QuizQuestion, Flashcard, Page } from '../types';
+import { optimizeNote, generateQuizFromNote, generateFlashcardsFromNote, generateExplanation, generateAudioRecapScript, generateExplainerVideo } from '../services/geminiService';
+import { useSpeech } from '../hooks/useSpeech';
+import QuizReadyModal from '../components/QuizReadyModal';
+import { useActivityLogger } from '../hooks/useActivityLogger';
 
 const LoadingSpinner = () => <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>;
+const CloseIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>;
+const PlayIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" /></svg>;
+const PauseIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8 7a1 1 0 00-1 1v4a1 1 0 102 0V8a1 1 0 00-1-1zm4 0a1 1 0 00-1 1v4a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" /></svg>;
 
-// Flashcard Viewer Component
-const FlashcardViewer: React.FC<{ flashcards: Flashcard[]; onClose: () => void }> = ({ flashcards, onClose }) => {
-    const [flippedStates, setFlippedStates] = useState<Record<number, boolean>>({});
-    const toggleFlip = (index: number) => {
-        setFlippedStates(prev => ({ ...prev, [index]: !prev[index] }));
-    };
+interface NotesPageProps { navigate: (page: Page) => void; }
+type ModalType = 'explanation' | 'audio' | 'video' | 'flashcards' | null;
 
-    return (
-        <div className="mt-4 p-4 bg-indigo-50 dark:bg-indigo-900/50 rounded-lg">
-            <div className="flex justify-between items-center mb-4">
-                <h4 className="font-bold text-lg">Generated Flashcards</h4>
-                <button onClick={onClose} className="text-sm font-semibold text-indigo-600 dark:text-indigo-400 hover:underline">Close</button>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {flashcards.map((card, index) => (
-                    <div key={index} className="perspective-1000 h-40" onClick={() => toggleFlip(index)}>
-                        <div className={`relative w-full h-full transition-transform duration-700 transform-style-3d ${flippedStates[index] ? 'rotate-y-180' : ''}`}>
-                            {/* Front */}
-                            <div className="absolute w-full h-full backface-hidden flex items-center justify-center p-4 bg-white dark:bg-slate-700 rounded-lg shadow-md cursor-pointer">
-                                <p className="text-center font-semibold">{card.front}</p>
-                            </div>
-                            {/* Back */}
-                            <div className="absolute w-full h-full backface-hidden flex items-center justify-center p-4 bg-indigo-100 dark:bg-indigo-800 rounded-lg shadow-md cursor-pointer rotate-y-180">
-                                <p className="text-center">{card.back}</p>
-                            </div>
-                        </div>
-                    </div>
-                ))}
-            </div>
-        </div>
-    );
-};
-
-
-// Quiz Display Component
-const QuizDisplay: React.FC<{ questions: QuizQuestion[]; onClose: () => void }> = ({ questions, onClose }) => {
-    return (
-        <div className="mt-4 p-4 bg-green-50 dark:bg-green-900/50 rounded-lg">
-            <div className="flex justify-between items-center mb-4">
-                <h4 className="font-bold text-lg">Generated Quiz</h4>
-                <button onClick={onClose} className="text-sm font-semibold text-green-600 dark:text-green-400 hover:underline">Close</button>
-            </div>
-            {questions.map((q, index) => (
-                <div key={index} className="mb-4">
-                    <p className="font-semibold">{index + 1}. {q.question}</p>
-                    <ul className="list-disc pl-5 mt-2 space-y-1">
-                        {q.options.map((opt, i) => (
-                            <li key={i} className={opt === q.correctAnswer ? 'text-green-700 dark:text-green-400 font-bold' : ''}>
-                                {opt} {opt === q.correctAnswer && '(Correct)'}
-                            </li>
-                        ))}
-                    </ul>
-                </div>
-            ))}
-        </div>
-    );
-};
-
-
-// Note Item Component
-interface NoteItemProps {
-    note: Note;
-    onDelete: (id: string) => void;
-    onGenerateQuiz: (note: Note) => void;
-    onGenerateFlashcards: (note: Note) => void;
-}
-const NoteItem: React.FC<NoteItemProps> = ({ note, onDelete, onGenerateQuiz, onGenerateFlashcards }) => {
-    const [isExpanded, setIsExpanded] = useState(false);
-
-    const formatContent = (text: string) => {
-        const parts = text.split(/(\`\`\`[\s\S]*?\`\`\`|\*\*.*?\*\*|!\[.*?\]\(.*?\))/g);
-        return parts.map((part, index) => {
-          if (!part) return null;
-          if (part.startsWith('```') && part.endsWith('```')) {
-            return <pre key={index} className="bg-slate-100 dark:bg-slate-700 p-2 rounded-md my-1 text-base font-semibold text-green-600 dark:text-green-400 whitespace-pre-wrap">{part.slice(3, -3).trim()}</pre>;
-          }
-          if (part.startsWith('**') && part.endsWith('**')) {
-            return <strong key={index}>{part.slice(2, -2)}</strong>;
-          }
-          const imageMatch = part.match(/!\[(.*?)\]\((.*?)\)/);
-          if (imageMatch) {
-              return <img key={index} src={imageMatch[2]} alt={imageMatch[1]} className="my-4 rounded-lg shadow-md max-w-full mx-auto" />;
-          }
-          return part.split('\n').map((line, i) => <span key={`${index}-${i}`}>{line}<br/></span>);
-        });
-      };
-
-    return (
-        <div className="bg-white dark:bg-slate-800 rounded-lg shadow-md mb-4 overflow-hidden">
-            <button onClick={() => setIsExpanded(!isExpanded)} className="w-full text-left p-4 flex justify-between items-center hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors">
-                <div>
-                    <p className="font-bold text-lg">{note.title}</p>
-                    <p className="text-sm text-slate-500">{new Date(note.timestamp).toLocaleString()}</p>
-                </div>
-                <svg className={`h-6 w-6 transform transition-transform ${isExpanded ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                </svg>
-            </button>
-            {isExpanded && (
-                <div className="p-4 border-t border-slate-200 dark:border-slate-700">
-                    <div className="prose prose-slate dark:prose-invert max-w-none space-y-2 mb-4">
-                      {formatContent(note.content)}
-                    </div>
-                    <div className="flex items-center justify-between">
-                         <div className="flex gap-2">
-                             <button onClick={() => onGenerateQuiz(note)} className="text-sm bg-green-500 hover:bg-green-600 text-white font-semibold py-1 px-3 rounded-md transition">Create Quiz</button>
-                             <button onClick={() => onGenerateFlashcards(note)} className="text-sm bg-indigo-500 hover:bg-indigo-600 text-white font-semibold py-1 px-3 rounded-md transition">Create Flashcards</button>
-                         </div>
-                        <button onClick={() => onDelete(note.id)} className="text-sm text-red-500 hover:text-red-700">Delete Note</button>
-                    </div>
-                </div>
-            )}
-        </div>
-    );
-};
-
-
-// Main Notes Page
-const NotesPage: React.FC = () => {
+const NotesPage: React.FC<NotesPageProps> = ({ navigate }) => {
     const [notes, setNotes] = useLocalStorage<Note[]>('notes', []);
-    const [isListening, setIsListening] = useState(false);
-    const [transcript, setTranscript] = useState('');
+    const [selectedNote, setSelectedNote] = useState<Note | null>(null);
+    const [viewMode, setViewMode] = useState<'list' | 'create'>('list');
+    const [isRecording, setIsRecording] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
-    const [activeQuizNoteId, setActiveQuizNoteId] = useState<string | null>(null);
-    const [activeFlashcardsNoteId, setActiveFlashcardsNoteId] = useState<string | null>(null);
-    const [generatedQuiz, setGeneratedQuiz] = useState<QuizQuestion[] | null>(null);
-    const [generatedFlashcards, setGeneratedFlashcards] = useState<Flashcard[] | null>(null);
-    const [isAiFeatureLoading, setIsAiFeatureLoading] = useState(false);
-
-    const [isLoadingFile, setIsLoadingFile] = useState(false);
-    const [videoFileForDescription, setVideoFileForDescription] = useState<File | null>(null);
-    const [videoDescription, setVideoDescription] = useState('');
-    const [isLoadingVideoNote, setIsLoadingVideoNote] = useState(false);
-
     const recognitionRef = useRef<any>(null);
-    const fileInputRef = useRef<HTMLInputElement>(null);
-    const videoInputRef = useRef<HTMLInputElement>(null);
+    const { speak, availableVoices } = useSpeech();
+    const { logActivity } = useActivityLogger();
 
-    const handleStartListening = () => {
-        const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-        if (!SpeechRecognition) {
-            alert("Speech Recognition API is not supported in this browser.");
-            return;
-        }
-        
-        recognitionRef.current = new SpeechRecognition();
-        recognitionRef.current.continuous = true;
-        recognitionRef.current.interimResults = true;
-        
-        recognitionRef.current.onresult = (event: any) => {
-            let interimTranscript = '';
-            let finalTranscript = '';
-            for (let i = event.resultIndex; i < event.results.length; ++i) {
-                if (event.results[i].isFinal) {
-                    finalTranscript += event.results[i][0].transcript;
-                } else {
-                    interimTranscript += event.results[i][0].transcript;
-                }
-            }
-            setTranscript(prev => prev + finalTranscript + interimTranscript.substring(prev.length));
-        };
-        
-        recognitionRef.current.start();
-        setIsListening(true);
+    const [modalOpen, setModalOpen] = useState<ModalType>(null);
+    const [modalNote, setModalNote] = useState<Note | null>(null);
+    const [isSpeaking, setIsSpeaking] = useState(false);
+    const [explanationData, setExplanationData] = useState<{ script: string, imageUrl: string | null } | null>(null);
+    const [audioRecapData, setAudioRecapData] = useState<{ script: string }>({ script: '' });
+    const [videoData, setVideoData] = useState<{ url: string | null, progress: string }>({ url: null, progress: '' });
+    const [flashcards, setFlashcards] = useState<Flashcard[]>([]);
+    const [isQuizReady, setIsQuizReady] = useState(false);
+
+    const handleCreateNote = (content: string, type: 'voice' | 'file' | 'video', rawContent?: string) => {
+        const title = content.substring(0, 40).split('\n')[0] + '...';
+        const newNote: Note = { id: new Date().toISOString(), subject: 'General', title, content, timestamp: Date.now(), rawContent };
+        setNotes([newNote, ...notes]);
+        if (type === 'voice') logActivity('NOTE_CREATED_VOICE', { title: newNote.title });
+        else if (type === 'file') logActivity('NOTE_CREATED_FILE', { title: newNote.title });
+        else if (type === 'video') logActivity('NOTE_CREATED_VIDEO', { title: newNote.title });
+        setViewMode('list');
     };
 
-    const handleFinishListening = async () => {
-        if (recognitionRef.current) {
-            recognitionRef.current.stop();
-        }
-        setIsListening(false);
-        setIsLoading(true);
-
-        const optimizedContent = await optimizeNote(transcript);
-        
-        const newNote: Note = {
-            id: new Date().toISOString(),
-            title: `Voice Note - ${new Date().toLocaleDateString()}`,
-            content: optimizedContent,
-            rawContent: transcript,
-            subject: 'General',
-            timestamp: Date.now(),
+    const startRecording = () => {
+        const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+        if (!SpeechRecognition) { alert("Speech Recognition API is not supported in this browser."); return; }
+        const recognition = new SpeechRecognition();
+        recognition.continuous = true; recognition.interimResults = false; recognition.lang = 'en-US';
+        recognitionRef.current = recognition;
+        recognition.onstart = () => setIsRecording(true);
+        recognition.onend = () => setIsRecording(false);
+        recognition.onresult = async (event: any) => {
+            const transcript = event.results[event.results.length - 1][0].transcript.trim();
+            if (transcript) {
+                setIsLoading(true);
+                const optimized = await optimizeNote(transcript);
+                handleCreateNote(optimized, 'voice', transcript);
+                setIsLoading(false);
+            }
         };
+        recognition.start();
+    };
 
-        setNotes(prevNotes => [newNote, ...prevNotes]);
-        setTranscript('');
+    const stopRecording = () => recognitionRef.current?.stop();
+
+    const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (file && file.type === 'text/plain') {
+            const reader = new FileReader();
+            reader.onload = async (event) => {
+                setIsLoading(true);
+                const optimized = await optimizeNote(event.target?.result as string);
+                handleCreateNote(optimized, 'file');
+                setIsLoading(false);
+            };
+            reader.readAsText(file);
+        }
+    };
+
+    const generateAndShowQuiz = async (note: Note) => {
+        setIsLoading(true);
+        const questions = await generateQuizFromNote(note.content);
+        if (questions) {
+            sessionStorage.setItem('activeQuiz', JSON.stringify(questions));
+            logActivity('NOTE_QUIZ_GENERATED', { noteId: note.id });
+            setIsQuizReady(true);
+        } else alert("Failed to generate quiz.");
         setIsLoading(false);
     };
 
-    const deleteNote = (id: string) => {
-        if (window.confirm('Are you sure you want to delete this note?')) {
-            setNotes(notes.filter(note => note.id !== id));
+    const beginQuiz = () => { setIsQuizReady(false); navigate('Quiz'); };
+    const generateAndShowFlashcards = async (note: Note) => { setIsLoading(true); setModalNote(note); const cards = await generateFlashcardsFromNote(note.content); if (cards) { setFlashcards(cards); logActivity('NOTE_FLASHCARDS_GENERATED', { noteId: note.id }); setModalOpen('flashcards'); } else alert("Failed to generate flashcards."); setIsLoading(false); };
+    const handleExplain = async (note: Note) => { setIsLoading(true); setModalNote(note); try { const data = await generateExplanation(note.content); setExplanationData(data); logActivity('NOTE_EXPLAINED', { noteId: note.id }); setModalOpen('explanation'); } catch (e: any) { alert(e.message); } setIsLoading(false); };
+    const handleAudioRecap = async (note: Note) => { setIsLoading(true); setModalNote(note); try { const script = await generateAudioRecapScript(note.content); setAudioRecapData({ script }); logActivity('AUDIO_RECAP_GENERATED', { noteId: note.id }); setModalOpen('audio'); } catch (e) { alert("Failed to generate audio recap."); } setIsLoading(false); };
+    const handleExplainerVideo = async (note: Note) => { setIsLoading(true); setModalNote(note); setModalOpen('video'); try { const url = await generateExplainerVideo(note.content, (progress) => setVideoData({ url: null, progress })); setVideoData({ url, progress: 'Video ready!' }); logActivity('VIDEO_GENERATED', { noteId: note.id }); } catch (e: any) { setVideoData({ url: null, progress: e.message }); } setIsLoading(false); };
+
+    const closeModal = () => {
+        window.speechSynthesis.cancel();
+        if (videoData.url && videoData.url.startsWith('blob:')) {
+            URL.revokeObjectURL(videoData.url);
         }
+        setModalOpen(null); setModalNote(null); setExplanationData(null); setFlashcards([]); setAudioRecapData({ script: '' }); setVideoData({ url: null, progress: '' }); setIsSpeaking(false);
     };
 
-    const handleGenerateQuiz = async (note: Note) => {
-        if (activeQuizNoteId === note.id) {
-            setActiveQuizNoteId(null);
-            setGeneratedQuiz(null);
-            return;
-        }
-        setIsAiFeatureLoading(true);
-        setActiveFlashcardsNoteId(null);
-        setGeneratedFlashcards(null);
-        const quiz = await generateQuizFromNote(note.content);
-        setGeneratedQuiz(quiz);
-        setActiveQuizNoteId(note.id);
-        setIsAiFeatureLoading(false);
-    };
-
-    const handleGenerateFlashcards = async (note: Note) => {
-        if (activeFlashcardsNoteId === note.id) {
-            setActiveFlashcardsNoteId(null);
-            setGeneratedFlashcards(null);
-            return;
-        }
-        setIsAiFeatureLoading(true);
-        setActiveQuizNoteId(null);
-        setGeneratedQuiz(null);
-        const flashcards = await generateFlashcardsFromNote(note.content);
-        setGeneratedFlashcards(flashcards);
-        setActiveFlashcardsNoteId(note.id);
-        setIsAiFeatureLoading(false);
-    };
-
-    const handleImportFileClick = () => fileInputRef.current?.click();
-    const handleImportVideoClick = () => videoInputRef.current?.click();
-
-    const handleFileImport = async (event: React.ChangeEvent<HTMLInputElement>) => {
-        const file = event.target.files?.[0];
-        if (!file) return;
-        setIsLoadingFile(true);
-
-        const reader = new FileReader();
-        reader.onload = async (e) => {
-            const content = e.target?.result as string;
-            if (content) {
-                const optimizedContent = await optimizeNote(content);
-                const newNote: Note = {
-                    id: new Date().toISOString(),
-                    title: `Imported Note: ${file.name}`,
-                    content: optimizedContent,
-                    rawContent: content,
-                    subject: 'General',
-                    timestamp: Date.now(),
-                };
-                setNotes(prev => [newNote, ...prev]);
+    useEffect(() => {
+        return () => {
+            if (videoData.url && videoData.url.startsWith('blob:')) {
+                URL.revokeObjectURL(videoData.url);
             }
-            setIsLoadingFile(false);
         };
-        reader.onerror = () => {
-            console.error("Failed to read file");
-            alert("Failed to read the selected file.");
-            setIsLoadingFile(false);
-        }
-        reader.readAsText(file);
-        event.target.value = '';
-    };
-
-    const handleVideoImport = (event: React.ChangeEvent<HTMLInputElement>) => {
-        const file = event.target.files?.[0];
-        if (!file) return;
-        setVideoFileForDescription(file);
-        event.target.value = '';
-    };
+    }, [videoData.url]);
     
-    const handleCreateVideoNote = async () => {
-        if (!videoDescription.trim() || !videoFileForDescription) return;
-        setIsLoadingVideoNote(true);
-        const optimizedContent = await optimizeNote(videoDescription);
-
-        const newNote: Note = {
-            id: new Date().toISOString(),
-            title: `Video Note: ${videoFileForDescription.name}`,
-            content: optimizedContent,
-            rawContent: videoDescription,
-            subject: 'General',
-            timestamp: Date.now(),
-        };
-        setNotes(prev => [newNote, ...prev]);
-        handleCancelVideoNote();
-        setIsLoadingVideoNote(false);
+    const handlePlayStop = (script: string) => {
+        if (isSpeaking) {
+            window.speechSynthesis.cancel();
+            setIsSpeaking(false);
+        } else {
+            const utterance = speak(script);
+            if (utterance) {
+                utterance.onstart = () => setIsSpeaking(true);
+                utterance.onend = () => setIsSpeaking(false);
+                utterance.onerror = () => setIsSpeaking(false);
+            }
+        }
     };
 
-    const handleCancelVideoNote = () => {
-        setVideoFileForDescription(null);
-        setVideoDescription('');
-    };
+    const renderNoteContent = (content: string) => <div className="prose prose-slate dark:prose-invert max-w-none" dangerouslySetInnerHTML={{ __html: content.replace(/\n/g, '<br />').replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') }} />;
 
     return (
         <div className="max-w-4xl mx-auto">
-            <h2 className="text-3xl font-bold mb-6 text-center">My Study Notes</h2>
-
-            <div className="bg-white dark:bg-slate-800 p-6 rounded-lg shadow-md mb-8">
-                <h3 className="text-xl font-bold mb-2">AI Note Taker</h3>
-                <p className="text-slate-600 dark:text-slate-400 mb-4">Dictate your notes, import a text file, or add a note for a video.</p>
-                {isListening && (
-                    <textarea value={transcript} readOnly className="w-full h-32 p-2 border rounded-md bg-slate-100 dark:bg-slate-700 mb-4" placeholder="Listening..." />
-                )}
-                <div className="flex flex-wrap gap-4">
-                    {!isListening ? (
-                        <button onClick={handleStartListening} disabled={isLoadingFile || isLoading} className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-lg transition disabled:bg-indigo-400">Start Listening</button>
+            {viewMode === 'list' && (
+                <div>
+                    <div className="flex justify-between items-center mb-6">
+                        <h2 className="text-3xl font-bold">My Notes</h2>
+                        <button onClick={() => setViewMode('create')} className="bg-indigo-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-indigo-700 transition">Create Note</button>
+                    </div>
+                    {notes.length > 0 ? (
+                        <div className="space-y-4">
+                            {notes.map(note => (
+                                <div key={note.id} className="bg-white dark:bg-slate-800 p-4 rounded-lg shadow-md transition hover:shadow-lg">
+                                    <div className="cursor-pointer" onClick={() => setSelectedNote(selectedNote?.id === note.id ? null : note)}>
+                                        <h3 className="text-xl font-bold text-indigo-700 dark:text-indigo-400">{note.title}</h3>
+                                        <p className="text-sm text-slate-500">{new Date(note.timestamp).toLocaleDateString()}</p>
+                                    </div>
+                                    {selectedNote?.id === note.id && (
+                                        <div className="mt-4 pt-4 border-t border-slate-200 dark:border-slate-700">
+                                            {renderNoteContent(note.content)}
+                                            <div className="mt-4 flex flex-wrap gap-2">
+                                                <button onClick={() => generateAndShowQuiz(note)} className="text-xs bg-blue-500 hover:bg-blue-600 text-white font-semibold py-1 px-3 rounded-full transition">Create Quiz</button>
+                                                <button onClick={() => generateAndShowFlashcards(note)} className="text-xs bg-purple-500 hover:bg-purple-600 text-white font-semibold py-1 px-3 rounded-full transition">Create Flashcards</button>
+                                                <button onClick={() => handleExplain(note)} className="text-xs bg-green-500 hover:bg-green-600 text-white font-semibold py-1 px-3 rounded-full transition">Tutor Me</button>
+                                                <button onClick={() => handleAudioRecap(note)} className="text-xs bg-orange-500 hover:bg-orange-600 text-white font-semibold py-1 px-3 rounded-full transition">Audio Recap</button>
+                                                <button onClick={() => handleExplainerVideo(note)} className="text-xs bg-red-500 hover:bg-red-600 text-white font-semibold py-1 px-3 rounded-full transition">Explainer Video</button>
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            ))}
+                        </div>
                     ) : (
-                        <button onClick={handleFinishListening} disabled={isLoading} className="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg transition flex items-center gap-2 disabled:bg-red-400">
-                           {isLoading && <LoadingSpinner />}
-                           {isLoading ? 'Optimizing...' : 'Finish & Optimize Note'}
-                        </button>
+                        <div className="text-center py-16 text-slate-500"><p>No notes yet. Click 'Create Note' to get started!</p></div>
                     )}
-                     <button onClick={handleImportFileClick} disabled={isLoadingFile || isListening || isLoading} className="bg-teal-600 hover:bg-teal-700 text-white font-bold py-2 px-4 rounded-lg transition flex items-center gap-2 disabled:bg-teal-400">
-                        {isLoadingFile && <LoadingSpinner />}
-                        {isLoadingFile ? 'Importing...' : 'Import Text File'}
-                     </button>
-                     <button onClick={handleImportVideoClick} disabled={isLoadingFile || isListening || isLoading} className="bg-sky-600 hover:bg-sky-700 text-white font-bold py-2 px-4 rounded-lg transition disabled:bg-sky-400">
-                         Add Video Note
-                     </button>
                 </div>
-                 <input type="file" ref={fileInputRef} onChange={handleFileImport} style={{ display: 'none' }} accept=".txt,.md" />
-                <input type="file" ref={videoInputRef} onChange={handleVideoImport} style={{ display: 'none' }} accept="video/*" />
-            </div>
-
-            {videoFileForDescription && (
-                <div className="bg-white dark:bg-slate-800 p-6 rounded-lg shadow-md mb-8 transition-all animate-fade-in">
-                    <h3 className="text-xl font-bold mb-2">Create Note for "{videoFileForDescription.name}"</h3>
-                    <p className="text-slate-600 dark:text-slate-400 mb-4">Describe the key points or summary of the video. The AI will structure it into a clean note.</p>
-                    <textarea
-                        value={videoDescription}
-                        onChange={(e) => setVideoDescription(e.target.value)}
-                        className="w-full h-32 p-2 border rounded-md bg-slate-100 dark:bg-slate-700 mb-4 focus:ring-2 focus:ring-indigo-500"
-                        placeholder="e.g., 'This video explains the quadratic formula, how to derive it, and provides two examples...'"
-                    />
-                    <div className="flex gap-4">
-                        <button onClick={handleCreateVideoNote} disabled={isLoadingVideoNote || !videoDescription.trim()} className="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg transition flex items-center gap-2 disabled:bg-green-400">
-                            {isLoadingVideoNote && <LoadingSpinner />}
-                            {isLoadingVideoNote ? 'Creating...' : 'Create Note'}
-                        </button>
-                        <button onClick={handleCancelVideoNote} className="bg-slate-500 hover:bg-slate-600 text-white font-bold py-2 px-4 rounded-lg transition">
-                            Cancel
-                        </button>
+            )}
+            {viewMode === 'create' && (
+                <div>
+                    <h2 className="text-3xl font-bold mb-6">Create a New Note</h2>
+                    <div className="grid md:grid-cols-2 gap-6">
+                        <div className="bg-white dark:bg-slate-800 p-6 rounded-lg shadow-md flex flex-col items-center justify-center text-center">
+                            <h3 className="text-xl font-bold mb-4">Record Live Lecture</h3>
+                            <p className="text-slate-500 mb-4">Record audio and our AI will transcribe and organize it into a structured note.</p>
+                            <button onClick={isRecording ? stopRecording : startRecording} disabled={isLoading || (isRecording && !availableVoices)} className={`w-20 h-20 rounded-full flex items-center justify-center transition-colors ${isRecording ? 'bg-red-500 hover:bg-red-600' : 'bg-indigo-600 hover:bg-indigo-700'} disabled:bg-slate-400`}>
+                                {isLoading ? <LoadingSpinner /> : <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-14 0m7 10v4M5 11v3a7 7 0 0014 0v-3m-7-5a3 3 0 013 3v2a3 3 0 01-6 0v-2a3 3 0 013-3z" /></svg>}
+                            </button>
+                            {isRecording && <p className="mt-4 text-red-500 animate-pulse">Recording... Click to stop.</p>}
+                        </div>
+                        <div className="bg-white dark:bg-slate-800 p-6 rounded-lg shadow-md flex flex-col items-center justify-center text-center">
+                            <h3 className="text-xl font-bold mb-4">Upload a File</h3>
+                            <p className="text-slate-500 mb-4">Upload a .txt file and we'll convert it into an optimized note.</p>
+                            <label className="bg-indigo-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-indigo-700 transition cursor-pointer">
+                                {isLoading ? 'Processing...' : 'Choose File'}
+                                <input type="file" accept=".txt" onChange={handleFileUpload} disabled={isLoading} className="hidden" />
+                            </label>
+                        </div>
+                    </div>
+                    <button onClick={() => setViewMode('list')} className="mt-8 text-indigo-600 dark:text-indigo-400 font-semibold hover:underline">← Back to Notes</button>
+                </div>
+            )}
+            <QuizReadyModal isOpen={isQuizReady} onClose={() => setIsQuizReady(false)} onBeginQuiz={beginQuiz} />
+            {modalOpen === 'explanation' && explanationData && (
+                <div className="fixed inset-0 bg-black bg-opacity-80 z-50 flex items-center justify-center" onClick={closeModal}>
+                    <div className="bg-slate-800 text-white rounded-2xl shadow-2xl p-6 max-w-3xl w-full relative animate-fade-in" onClick={e => e.stopPropagation()}>
+                        <button onClick={closeModal} className="absolute top-4 right-4 text-slate-400 hover:text-white"><CloseIcon /></button>
+                        <h3 className="text-2xl font-bold mb-4">Tutor Me: {modalNote?.title}</h3>
+                        <div className="flex flex-col md:flex-row gap-6">
+                            <div className="w-full md:w-1/2 h-64 bg-slate-900 rounded-lg flex items-center justify-center">{explanationData.imageUrl ? <img src={explanationData.imageUrl} alt="Visual Aid" className="max-h-full max-w-full rounded" /> : <p>Visual aid not available.</p>}</div>
+                            <div className="w-full md:w-1/2">
+                                <p className="text-slate-300 mb-4">{explanationData.script}</p>
+                                <button onClick={() => handlePlayStop(explanationData.script)} className="text-indigo-400 hover:text-white transition">{isSpeaking ? <PauseIcon /> : <PlayIcon />}</button>
+                            </div>
+                        </div>
                     </div>
                 </div>
             )}
-
-            {notes.length > 0 ? (
-                <div>
-                    {notes.map(note => (
-                        <React.Fragment key={note.id}>
-                            <NoteItem note={note} onDelete={deleteNote} onGenerateQuiz={handleGenerateQuiz} onGenerateFlashcards={handleGenerateFlashcards} />
-                            {isAiFeatureLoading && (activeQuizNoteId === note.id || activeFlashcardsNoteId === note.id) && <p className="text-center my-2">AI is generating content...</p>}
-                            {activeQuizNoteId === note.id && generatedQuiz && <QuizDisplay questions={generatedQuiz} onClose={() => setActiveQuizNoteId(null)} />}
-                            {activeFlashcardsNoteId === note.id && generatedFlashcards && <FlashcardViewer flashcards={generatedFlashcards} onClose={() => setActiveFlashcardsNoteId(null)} />}
-                        </React.Fragment>
-                    ))}
+            {modalOpen === 'audio' && (
+                <div className="fixed inset-0 bg-black bg-opacity-80 z-50 flex items-center justify-center" onClick={closeModal}>
+                    <div className="bg-slate-800 text-white rounded-2xl shadow-2xl p-8 max-w-md w-full relative animate-fade-in text-center" onClick={e => e.stopPropagation()}>
+                        <button onClick={closeModal} className="absolute top-4 right-4 text-slate-400 hover:text-white"><CloseIcon /></button>
+                        <h3 className="text-2xl font-bold mb-4">Audio Recap</h3>
+                        <p className="text-slate-400 mb-6">Listen to a podcast-style summary of your note.</p>
+                        <button onClick={() => handlePlayStop(audioRecapData.script)} className="text-indigo-400 hover:text-white transition">{isSpeaking ? <PauseIcon /> : <PlayIcon />}</button>
+                    </div>
                 </div>
-            ) : (
-                <div className="text-center bg-white dark:bg-slate-800 p-12 rounded-lg shadow-md">
-                    <p className="text-2xl mb-4">📚</p>
-                    <h3 className="text-xl font-semibold mb-2">Your notebook is empty.</h3>
-                    <p className="text-slate-500">Use the AI Note Taker or save a solution from the 'Solver' tab to get started.</p>
+            )}
+            {modalOpen === 'video' && (
+                <div className="fixed inset-0 bg-black bg-opacity-80 z-50 flex items-center justify-center" onClick={closeModal}>
+                     <div className="bg-slate-800 text-white rounded-2xl shadow-2xl p-8 max-w-lg w-full relative animate-fade-in text-center" onClick={e => e.stopPropagation()}>
+                        <button onClick={closeModal} className="absolute top-4 right-4 text-slate-400 hover:text-white"><CloseIcon /></button>
+                        <h3 className="text-2xl font-bold mb-4">Explainer Video</h3>
+                        {videoData.url ? (
+                            <div>
+                                <p className="text-slate-300 mb-4">{videoData.progress}</p>
+                                <video src={videoData.url} controls autoPlay className="w-full rounded-lg">
+                                    Your browser does not support the video tag.
+                                </video>
+                            </div>
+                        ) : (
+                            <div>
+                                <div className="flex justify-center my-8"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-400"></div></div>
+                                <p className="text-slate-300">{videoData.progress || 'Initializing...'}</p>
+                                <p className="text-xs text-slate-500 mt-2">Video generation can take a few minutes.</p>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            )}
+            {modalOpen === 'flashcards' && (
+                <div className="fixed inset-0 bg-black bg-opacity-80 z-50 flex items-center justify-center" onClick={closeModal}>
+                     <div className="bg-slate-800 text-white rounded-2xl shadow-2xl p-6 max-w-4xl w-full relative animate-fade-in" onClick={e => e.stopPropagation()}>
+                        <button onClick={closeModal} className="absolute top-4 right-4 text-slate-400 hover:text-white"><CloseIcon /></button>
+                        <h3 className="text-2xl font-bold mb-4 text-center">Flashcards</h3>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 h-[60vh] overflow-y-auto p-2">
+                           {flashcards.map((card, i) => <div key={i} className="bg-slate-700 p-4 rounded-lg flex flex-col justify-between"><div className="font-bold mb-2">{card.front}</div><div className="text-sm text-slate-300 pt-2 border-t border-slate-600">{card.back}</div></div>)}
+                        </div>
+                    </div>
                 </div>
             )}
         </div>

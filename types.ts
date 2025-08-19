@@ -1,7 +1,7 @@
 
 export type Theme = 'light' | 'dark';
 
-export type Page = 'Home' | 'Solver' | 'General AI' | 'Practice' | 'Notes' | 'Settings' | 'YouTube Summarizer' | 'Suggestions' | 'Profile';
+export type Page = 'Home' | 'Solver' | 'AI Tutor' | 'Practice' | 'Notes' | 'Settings' | 'YouTube Summarizer' | 'Suggestions' | 'Profile' | 'Quiz' | 'Essay Grader' | 'Calendar';
 
 export interface NavItem {
   name: Page;
@@ -25,11 +25,12 @@ export interface QuizQuestion {
   correctAnswer: string;
 }
 
-export interface PracticeStats {
+export interface UserStats {
   score: number;
   streak: number;
   questionsAttempted: number;
   correctAnswers: number;
+  xp: number;
 }
 
 export interface Flashcard {
@@ -41,3 +42,31 @@ export type ChatMessage = {
   role: 'user' | 'model';
   content: string;
 };
+
+// New types for activity logging
+export type ActivityType =
+  | 'SOLVED_PROBLEM_TEXT'
+  | 'SOLVED_PROBLEM_WHITEBOARD'
+  | 'VISUAL_QUESTION_ASKED'
+  | 'PRACTICE_ANSWER'
+  | 'NOTE_CREATED_VOICE'
+  | 'NOTE_CREATED_FILE'
+  | 'NOTE_CREATED_VIDEO'
+  | 'NOTE_QUIZ_GENERATED'
+  | 'NOTE_FLASHCARDS_GENERATED'
+  | 'NOTE_EXPLAINED'
+  | 'AUDIO_RECAP_GENERATED'
+  | 'VIDEO_GENERATED'
+  | 'YOUTUBE_SUMMARY_SAVED'
+  | 'CHAT_MESSAGE_SENT'
+  | 'SUGGESTION_SUBMITTED'
+  | 'ESSAY_GRADED'
+  | 'STUDY_PLAN_GENERATED';
+
+
+export interface Activity {
+  id: string;
+  type: ActivityType;
+  timestamp: number;
+  details: Record<string, any>;
+}

@@ -7,13 +7,16 @@ import Header from './components/Header';
 import Sidebar from './components/Sidebar';
 import HomePage from './pages/HomePage';
 import SolverPage from './pages/SolverPage';
-import GeneralAiPage from './pages/GeneralAiPage';
+import AiTutorPage from './pages/GeneralAiPage'; // Renamed component, file stays the same for now
 import PracticePage from './pages/PracticePage';
 import NotesPage from './pages/NotesPage';
 import YouTubeSummarizerPage from './pages/YouTubeSummarizerPage';
 import SettingsPage from './pages/SettingsPage';
 import SuggestionsPage from './pages/SuggestionsPage';
 import ProfilePage from './pages/ProfilePage';
+import QuizPlayerPage from './pages/QuizPlayerPage';
+import EssayGraderPage from './pages/EssayGraderPage';
+import CalendarPage from './pages/CalendarPage';
 import FAB from './components/FAB';
 import VoiceAssistantModal from './components/VoiceAssistantModal';
 
@@ -34,20 +37,26 @@ export default function App() {
         return <HomePage navigate={navigate} />;
       case 'Solver':
         return <SolverPage />;
-      case 'General AI':
-        return <GeneralAiPage />;
+      case 'AI Tutor':
+        return <AiTutorPage />;
       case 'Practice':
         return <PracticePage />;
       case 'Notes':
-        return <NotesPage />;
+        return <NotesPage navigate={navigate} />;
       case 'YouTube Summarizer':
         return <YouTubeSummarizerPage />;
+      case 'Essay Grader':
+        return <EssayGraderPage />;
+      case 'Calendar':
+        return <CalendarPage />;
       case 'Settings':
         return <SettingsPage theme={theme} setTheme={setTheme} />;
       case 'Suggestions':
         return <SuggestionsPage />;
       case 'Profile':
         return <ProfilePage />;
+      case 'Quiz':
+        return <QuizPlayerPage navigate={navigate} />;
       default:
         return <HomePage navigate={navigate} />;
     }

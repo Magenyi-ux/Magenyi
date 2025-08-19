@@ -1,5 +1,6 @@
 import React from 'react';
 import { Page } from '../types';
+import ProgressTracker from '../components/ProgressTracker';
 
 interface HomePageProps {
     navigate: (page: Page) => void;
@@ -46,6 +47,8 @@ const HomePage: React.FC<HomePageProps> = ({ navigate }) => {
             />
         </div>
         
+        <ProgressTracker />
+
         <div className="mt-16">
             <button
                 onClick={() => navigate('Solver')}

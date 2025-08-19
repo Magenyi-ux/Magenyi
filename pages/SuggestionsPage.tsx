@@ -1,6 +1,8 @@
 
+
 import React, { useState } from 'react';
 import { submitSuggestion } from '../services/geminiService';
+import { useActivityLogger } from '../hooks/useActivityLogger';
 
 const LoadingSpinner = () => <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>;
 
@@ -10,6 +12,7 @@ const SuggestionsPage: React.FC = () => {
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState('');
     const [confirmation, setConfirmation] = useState('');
+    const { logActivity } = useActivityLogger();
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -24,6 +27,7 @@ const SuggestionsPage: React.FC = () => {
         try {
             const aiResponse = await submitSuggestion(category, message);
             setConfirmation(aiResponse);
+            logActivity('SUGGESTION_SUBMITTED', { category });
             setMessage(''); // Clear the form on success
             setCategory('Feature Request');
         } catch (e) {

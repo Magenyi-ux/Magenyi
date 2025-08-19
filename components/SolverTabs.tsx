@@ -1,7 +1,7 @@
 
 import React from 'react';
 
-type SolverMode = 'text' | 'whiteboard';
+type SolverMode = 'text' | 'whiteboard' | 'visual';
 
 interface SolverTabsProps {
   activeTab: SolverMode;
@@ -26,6 +26,12 @@ const SolverTabs: React.FC<SolverTabsProps> = ({ activeTab, onTabChange }) => {
         className={`${tabStyles} ${activeTab === 'whiteboard' ? activeStyles : inactiveStyles}`}
       >
         Whiteboard
+      </button>
+      <button
+        onClick={() => onTabChange('visual')}
+        className={`${tabStyles} ${activeTab === 'visual' ? activeStyles : inactiveStyles}`}
+      >
+        Visual Q&A
       </button>
     </div>
   );

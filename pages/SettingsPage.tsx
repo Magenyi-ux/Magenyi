@@ -1,11 +1,20 @@
 import React from 'react';
-import { Theme } from '../types';
+import { Theme, UserStats } from '../types';
 import { useSpeech } from '../hooks/useSpeech';
+import { useLocalStorage } from '../hooks/useLocalStorage';
 
 interface SettingsPageProps {
   theme: Theme;
   setTheme: (theme: Theme) => void;
 }
+
+const INITIAL_STATS: UserStats = {
+  score: 0,
+  streak: 0,
+  questionsAttempted: 0,
+  correctAnswers: 0,
+  xp: 0,
+};
 
 const ThemeToggle: React.FC<SettingsPageProps> = ({ theme, setTheme }) => {
     const isDark = theme === 'dark';
@@ -25,12 +34,13 @@ const ThemeToggle: React.FC<SettingsPageProps> = ({ theme, setTheme }) => {
 
 const SettingsPage: React.FC<SettingsPageProps> = ({ theme, setTheme }) => {
     const { availableVoices, saveSelectedVoice, speak, getSelectedVoiceName } = useSpeech();
+    const [stats] = useLocalStorage<UserStats>('userStats', INITIAL_STATS);
     const selectedVoiceName = getSelectedVoiceName();
     
     const clearAppData = () => {
         if (window.confirm('Are you sure you want to delete all your notes and practice stats? This action cannot be undone.')) {
             localStorage.removeItem('notes');
-            localStorage.removeItem('practiceStats');
+            localStorage.removeItem('userStats');
             alert('Your notes and practice stats have been cleared.');
             window.location.reload();
         }
@@ -58,6 +68,14 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ theme, setTheme }) => {
                     <ThemeToggle theme={theme} setTheme={setTheme} />
                 </div>
                 
+                <div className="border-t border-slate-200 dark:border-slate-700"></div>
+
+                <div>
+                    <h3 className="text-lg font-semibold">User Experience</h3>
+                    <p className="text-sm text-slate-500">Your current total experience points.</p>
+                    <p className="text-2xl font-bold mt-2 text-indigo-600 dark:text-indigo-400">{stats.xp} XP</p>
+                </div>
+
                 <div className="border-t border-slate-200 dark:border-slate-700"></div>
 
                 <div>
