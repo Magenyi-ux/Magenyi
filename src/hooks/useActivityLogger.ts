@@ -1,5 +1,4 @@
 
-
 import { useCallback } from 'react';
 import { useLocalStorage } from './useLocalStorage';
 import { Activity, ActivityType } from '../types';

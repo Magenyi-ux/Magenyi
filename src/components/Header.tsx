@@ -1,5 +1,4 @@
 
-
 import React from 'react';
 import { Page } from '../types';
 import MiniProgressTracker from './MiniProgressTracker';

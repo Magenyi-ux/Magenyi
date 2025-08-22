@@ -1,5 +1,4 @@
 
-
 import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { Page, UserStats } from './types';
 import { NAV_ITEMS, INITIAL_STATS } from './constants';

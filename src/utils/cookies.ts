@@ -1,3 +1,4 @@
+
 /**
  * Sets a cookie in the browser.
  * @param name - The name of the cookie.
