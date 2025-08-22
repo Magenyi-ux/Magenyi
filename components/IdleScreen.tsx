@@ -25,23 +25,88 @@ const IdleScreen: React.FC = () => {
     directionalLight.position.set(5, 5, 5).normalize();
     scene.add(directionalLight);
 
-    // --- Donut Model ---
-    const geometry = new THREE.TorusGeometry(1.5, 0.6, 32, 100);
-    const material = new THREE.MeshStandardMaterial({
-      color: 0xff69b4, // Pink frosting
-      roughness: 0.5,
-      metalness: 0.2,
+    // --- Atom Model ---
+    interface Disposable {
+      dispose(): void;
+    }
+    const disposables: Disposable[] = []; // To track objects for cleanup
+
+    const atom = new THREE.Group();
+
+    // Nucleus
+    const nucleusGeometry = new THREE.SphereGeometry(0.5, 32, 32);
+    disposables.push(nucleusGeometry);
+    const nucleusMaterial = new THREE.MeshStandardMaterial({
+      color: 0x4f46e5, // indigo-600
+      roughness: 0.4,
+      metalness: 0.1,
     });
-    const donut = new THREE.Mesh(geometry, material);
-    scene.add(donut);
+    disposables.push(nucleusMaterial);
+    const nucleus = new THREE.Mesh(nucleusGeometry, nucleusMaterial);
+    atom.add(nucleus);
+
+    // Electrons and Orbits
+    const electrons: THREE.Mesh[] = [];
+    const orbitData = [
+      { color: 0x06b6d4, radius: 2, speed: 1.2 }, // cyan-500
+      { color: 0xd946ef, radius: 2.5, speed: -0.9 }, // fuchsia-500
+      { color: 0xeab308, radius: 3, speed: 0.7 }, // yellow-500
+    ];
+
+    orbitData.forEach(data => {
+      const orbitGroup = new THREE.Group();
+
+      // Orbit path
+      const orbitGeometry = new THREE.TorusGeometry(data.radius, 0.02, 16, 100);
+      disposables.push(orbitGeometry);
+      const orbitMaterial = new THREE.MeshBasicMaterial({
+        color: 0xffffff,
+        transparent: true,
+        opacity: 0.3,
+      });
+      disposables.push(orbitMaterial);
+      const orbit = new THREE.Mesh(orbitGeometry, orbitMaterial);
+      orbitGroup.add(orbit);
+      
+      // Electron
+      const electronGeometry = new THREE.SphereGeometry(0.15, 16, 16);
+      disposables.push(electronGeometry);
+      const electronMaterial = new THREE.MeshStandardMaterial({
+        color: data.color,
+        roughness: 0.2,
+        metalness: 0.3,
+      });
+      disposables.push(electronMaterial);
+      const electron = new THREE.Mesh(electronGeometry, electronMaterial);
+      orbitGroup.add(electron);
+      electrons.push(electron);
+
+      // Tilt the orbit
+      orbitGroup.rotation.x = Math.random() * Math.PI;
+      orbitGroup.rotation.y = Math.random() * Math.PI;
+      
+      atom.add(orbitGroup);
+    });
+
+    scene.add(atom);
 
     // --- Animation ---
+    const clock = new THREE.Clock();
     let animationFrameId: number;
     const animate = () => {
       animationFrameId = requestAnimationFrame(animate);
-      
-      donut.rotation.x += 0.005;
-      donut.rotation.y += 0.005;
+      const elapsedTime = clock.getElapsedTime();
+
+      // Animate electrons
+      electrons.forEach((electron, index) => {
+        const data = orbitData[index];
+        electron.position.x = data.radius * Math.cos(elapsedTime * data.speed);
+        electron.position.y = data.radius * Math.sin(elapsedTime * data.speed);
+      });
+
+      // Rotate the whole atom
+      atom.rotation.y += 0.002;
+      atom.rotation.x += 0.001;
 
       renderer.render(scene, camera);
     };
@@ -64,8 +129,7 @@ const IdleScreen: React.FC = () => {
       }
       // Dispose Three.js objects
       renderer.dispose();
-      geometry.dispose();
-      material.dispose();
+      disposables.forEach(item => item.dispose());
     };
   }, []);
 

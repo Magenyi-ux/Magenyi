@@ -1,3 +1,4 @@
+
 const CACHE_NAME = 'learnsphere-ai-v2';
 const STATIC_ASSETS = [
     // Core App Shell
@@ -42,7 +43,6 @@ const STATIC_ASSETS = [
     '/components/Notification.tsx',
     '/components/VoiceAssistantModal.tsx',
     '/components/StudyFact.tsx',
-    '/components/IdleScreen.tsx',
 
     // Pages
     '/pages/HomePage.tsx',

@@ -1,4 +1,5 @@
-import React, { useState, useCallback, useEffect, useRef } from 'react';
+
+import React, { useState, useCallback, useEffect } from 'react';
 import { Page, Theme, UserStats } from './types';
 import { NAV_ITEMS, INITIAL_STATS } from './constants';
 import { useTheme } from './hooks/useTheme';
@@ -25,7 +26,6 @@ import { useNotification } from './hooks/useNotification';
 import SetupPage from './pages/SetupPage';
 import { useAuth } from './hooks/useAuth';
 import AuthPage from './pages/AuthPage';
-import IdleScreen from './components/IdleScreen';
 
 
 const AppContent: React.FC = () => {
@@ -172,79 +172,6 @@ const AppContent: React.FC = () => {
 // New component to handle routing based on auth state
 const AppRouter: React.FC = () => {
   const { isAuthenticated, isLoading } = useAuth();
-  const [isIdle, setIsIdle] = useState(false);
-  const [isApiBusy, setIsApiBusy] = useState(false);
-  const [idleTimeoutSeconds] = useLocalStorage<number>('idleTimeoutSeconds', 5);
-  const isApiBusyRef = useRef(isApiBusy);
-  isApiBusyRef.current = isApiBusy;
-  const idleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  // Listener for global API events from geminiService
-  useEffect(() => {
-    const handleApiStart = () => setIsApiBusy(true);
-    const handleApiEnd = () => setIsApiBusy(false);
-    window.addEventListener('apiCallStart', handleApiStart);
-    window.addEventListener('apiCallEnd', handleApiEnd);
-    return () => {
-      window.removeEventListener('apiCallStart', handleApiStart);
-      window.removeEventListener('apiCallEnd', handleApiEnd);
-    };
-  }, []);
-
-  // This handler is for user-driven events (mouse, keyboard, etc.).
-  const handleUserActivity = useCallback(() => {
-    // Any user activity means we are no longer idle.
-    setIsIdle(false);
-    
-    // Clear any previous timer.
-    if (idleTimerRef.current) {
-      clearTimeout(idleTimerRef.current);
-    }
-    
-    // Only set a new timer if an API call is not in progress.
-    if (!isApiBusyRef.current) {
-      idleTimerRef.current = setTimeout(() => {
-        setIsIdle(true);
-      }, idleTimeoutSeconds * 1000); 
-    }
-  }, [idleTimeoutSeconds]);
-
-  // This effect re-evaluates the idle timer whenever the API status changes.
-  useEffect(() => {
-    if (isApiBusy) {
-      // API call started: we are not idle. Clear any pending timer.
-      setIsIdle(false);
-      if (idleTimerRef.current) {
-        clearTimeout(idleTimerRef.current);
-      }
-    } else {
-      // API call finished: restart the idle timer as if the user just moved.
-      handleUserActivity();
-    }
-  }, [isApiBusy, handleUserActivity]);
-
-  // This effect attaches and cleans up the user activity event listeners.
-  useEffect(() => {
-    if (isAuthenticated && !isLoading) {
-      const events: (keyof WindowEventMap)[] = ['mousemove', 'mousedown', 'keypress', 'scroll', 'touchstart'];
-      events.forEach(event => window.addEventListener(event, handleUserActivity));
-      
-      // Start the timer when the component mounts and user is authenticated.
-      handleUserActivity();
-
-      return () => {
-        events.forEach(event => window.removeEventListener(event, handleUserActivity));
-        if (idleTimerRef.current) {
-          clearTimeout(idleTimerRef.current);
-        }
-      };
-    } else {
-        // Ensure everything is cleared if user logs out or app is loading.
-        if (idleTimerRef.current) clearTimeout(idleTimerRef.current);
-        setIsIdle(false);
-    }
-  }, [isAuthenticated, isLoading, handleUserActivity]);
-
 
   if (isLoading) {
     return (
@@ -259,12 +186,7 @@ const AppRouter: React.FC = () => {
   }
 
   // If authenticated, render the main app content which includes the setup check
-  return (
-    <>
-      <AppContent />
-      {isIdle && <IdleScreen />}
-    </>
-  );
+  return <AppContent />;
 }
 
 

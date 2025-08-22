@@ -1,4 +1,5 @@
-import React from 'react';
+
+import React, { useState, useEffect } from 'react';
 import { Theme, UserStats } from '../types';
 import { useSpeech } from '../hooks/useSpeech';
 import { useLocalStorage } from '../hooks/useLocalStorage';
@@ -10,7 +11,12 @@ interface SettingsPageProps {
   setTheme: (theme: Theme) => void;
 }
 
-const ThemeToggle: React.FC<SettingsPageProps> = ({ theme, setTheme }) => {
+interface ThemeToggleProps {
+  theme: Theme;
+  setTheme: (theme: Theme) => void;
+}
+
+const ThemeToggle: React.FC<ThemeToggleProps> = ({ theme, setTheme }) => {
     const isDark = theme === 'dark';
     const toggleTheme = () => setTheme(isDark ? 'light' : 'dark');
 
@@ -29,28 +35,45 @@ const ThemeToggle: React.FC<SettingsPageProps> = ({ theme, setTheme }) => {
 const SettingsPage: React.FC<SettingsPageProps> = ({ theme, setTheme }) => {
     const { availableVoices, saveSelectedVoice, speak, getSelectedVoiceName } = useSpeech();
     const [stats] = useLocalStorage<UserStats>('userStats', INITIAL_STATS);
-    const [idleTimeout, setIdleTimeout] = useLocalStorage<number>('idleTimeoutSeconds', 5);
-    const selectedVoiceName = getSelectedVoiceName();
     const { showNotification } = useNotification();
     
+    // --- Local state for pending settings ---
+    const [pendingTheme, setPendingTheme] = useState(theme);
+    const [pendingVoiceName, setPendingVoiceName] = useState(getSelectedVoiceName());
+
+    // --- Sync local state if props/persisted values change from elsewhere ---
+    useEffect(() => { setPendingTheme(theme); }, [theme]);
+    useEffect(() => { setPendingVoiceName(getSelectedVoiceName()); }, [availableVoices, getSelectedVoiceName]);
+
     const clearAppData = () => {
         if (window.confirm('Are you sure you want to delete all your notes and practice stats? This action cannot be undone.')) {
             localStorage.removeItem('notes');
             localStorage.removeItem('userStats');
             localStorage.removeItem('activeTime');
             showNotification('Your notes and practice stats have been cleared.', 'success');
-            // We can't reload here as it would clear the notification state
-            // The app will reflect the cleared state on next navigation
         }
     };
 
     const handleTestVoice = () => {
-        const currentMappedVoice = availableVoices.find(v => v.name === selectedVoiceName);
+        const currentMappedVoice = availableVoices.find(v => v.name === pendingVoiceName);
         if (currentMappedVoice) {
             speak(`This is the voice of ${currentMappedVoice.name}.`, currentMappedVoice.voice);
         } else {
             speak('This is the default voice.');
         }
+    };
+    
+    const handleSave = () => {
+        // Persist theme
+        setTheme(pendingTheme);
+        
+        // Persist voice selection
+        const voiceToSave = availableVoices.find(v => v.name === pendingVoiceName);
+        if (voiceToSave) {
+            saveSelectedVoice(voiceToSave.voice);
+        }
+        
+        showNotification('Settings saved successfully!', 'success');
     };
 
     return (
@@ -63,7 +86,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ theme, setTheme }) => {
                         <h3 className="text-lg font-semibold">Theme</h3>
                         <p className="text-sm text-slate-500">Switch between light and dark mode.</p>
                     </div>
-                    <ThemeToggle theme={theme} setTheme={setTheme} />
+                    <ThemeToggle theme={pendingTheme} setTheme={setPendingTheme} />
                 </div>
                 
                 <div className="border-t border-slate-200 dark:border-slate-700"></div>
@@ -82,14 +105,14 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ theme, setTheme }) => {
                     {availableVoices.length > 0 ? (
                         <div className="flex items-center gap-4">
                            <div className="flex rounded-md shadow-sm" role="radiogroup" aria-label="Select AI Voice">
-                             {availableVoices.map(({ name, voice }) => (
+                             {availableVoices.map(({ name }) => (
                                 <button
                                   key={name}
                                   role="radio"
-                                  aria-checked={selectedVoiceName === name}
-                                  onClick={() => saveSelectedVoice(voice)}
+                                  aria-checked={pendingVoiceName === name}
+                                  onClick={() => setPendingVoiceName(name)}
                                   className={`relative px-4 py-2 text-sm font-medium transition-colors border
-                                    ${selectedVoiceName === name
+                                    ${pendingVoiceName === name
                                       ? 'bg-indigo-600 border-indigo-600 text-white z-10'
                                       : 'bg-white dark:bg-slate-700 border-slate-300 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-600'
                                     }
@@ -114,25 +137,6 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ theme, setTheme }) => {
                 </div>
 
                 <div className="border-t border-slate-200 dark:border-slate-700"></div>
-                
-                <div>
-                    <h3 className="text-lg font-semibold">Idle Screensaver</h3>
-                    <p className="text-sm text-slate-500 mb-4">Set the inactivity time before the spinning donut appears (in seconds).</p>
-                    <div className="flex items-center gap-4">
-                        <input
-                            type="range"
-                            min="1"
-                            max="60"
-                            value={idleTimeout}
-                            onChange={(e) => setIdleTimeout(Number(e.target.value))}
-                            className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer dark:bg-slate-700"
-                            aria-label="Idle timeout in seconds"
-                        />
-                        <span className="font-semibold w-12 text-center text-slate-700 dark:text-slate-300">{idleTimeout}s</span>
-                    </div>
-                </div>
-
-                <div className="border-t border-slate-200 dark:border-slate-700"></div>
 
                 <div>
                     <h3 className="text-lg font-semibold">Manage Data</h3>
@@ -142,6 +146,15 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ theme, setTheme }) => {
                         className="bg-red-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-red-700 transition"
                     >
                         Clear App Data
+                    </button>
+                </div>
+                
+                <div className="border-t border-slate-200 dark:border-slate-700 pt-6">
+                    <button
+                        onClick={handleSave}
+                        className="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-lg transition"
+                    >
+                        Save Settings
                     </button>
                 </div>
             </div>

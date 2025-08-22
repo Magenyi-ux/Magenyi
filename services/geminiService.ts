@@ -34,31 +34,26 @@ let currentApiKeyIndex = 0;
 const getGenAI = () => new GoogleGenAI({ apiKey: apiKeys[currentApiKeyIndex] });
 
 const callApiWithRetries = async <T,>(apiCall: (ai: GoogleGenAI) => Promise<T>): Promise<T> => {
-    window.dispatchEvent(new CustomEvent('apiCallStart'));
-    try {
-        const maxRetries = apiKeys.length;
-        for (let i = 0; i < maxRetries; i++) {
-            try {
-                const ai = getGenAI();
-                const result = await apiCall(ai);
-                return result;
-            } catch (error: any) {
-                console.error(`API call with key index ${currentApiKeyIndex} failed.`, error);
-                const errorMessage = error.toString() + (error.error ? JSON.stringify(error.error) : '');
-                if (errorMessage.includes('429') || (error.error && error.error.code === 429)) {
-                    currentApiKeyIndex = (currentApiKeyIndex + 1) % apiKeys.length;
-                    console.log(`Switching to API key index ${currentApiKeyIndex}.`);
-                    if (i < maxRetries - 1) {
-                        continue; // Retry with the next key
-                    }
+    const maxRetries = apiKeys.length;
+    for (let i = 0; i < maxRetries; i++) {
+        try {
+            const ai = getGenAI();
+            const result = await apiCall(ai);
+            return result;
+        } catch (error: any) {
+            console.error(`API call with key index ${currentApiKeyIndex} failed.`, error);
+            const errorMessage = error.toString() + (error.error ? JSON.stringify(error.error) : '');
+            if (errorMessage.includes('429') || (error.error && error.error.code === 429)) {
+                currentApiKeyIndex = (currentApiKeyIndex + 1) % apiKeys.length;
+                console.log(`Switching to API key index ${currentApiKeyIndex}.`);
+                if (i < maxRetries - 1) {
+                    continue; // Retry with the next key
                 }
-                throw error;
             }
+            throw error;
         }
-        throw new Error("All API keys failed or are rate-limited.");
-    } finally {
-        window.dispatchEvent(new CustomEvent('apiCallEnd'));
     }
+    throw new Error("All API keys failed or are rate-limited.");
 };
 
 const handleApiError = (error: any, context: string): string => {
@@ -384,9 +379,9 @@ export const generateStudyFact = async (field: string): Promise<string> => {
   }
 };
 
-export const generateDailyChallenge = async (field: string): Promise<{ question: string; answer: string }> => {
+export const generateDailyChallenge = async (field: string): Promise<{ question: string; options: string[]; correctAnswer: string }> => {
   try {
-    const prompt = `Generate a single, unique, and challenging quiz question for a student studying ${field}. This should be a "thought-provoker" style question, not multiple choice. Provide both the question and a concise answer.`;
+    const prompt = `Generate a single, unique, and challenging multiple-choice quiz question for a student studying ${field}. Provide one correct answer and three plausible but incorrect distractors. The question should be a "thought-provoker" style question adapted to a multiple-choice format.`;
     const response = await callApiWithRetries<GenerateContentResponse>(ai => ai.models.generateContent({
       model: "gemini-2.5-flash",
       contents: prompt,
@@ -396,17 +391,23 @@ export const generateDailyChallenge = async (field: string): Promise<{ question:
           type: Type.OBJECT,
           properties: {
             question: { type: Type.STRING, description: "The challenging question." },
-            answer: { type: Type.STRING, description: "The concise answer to the question." },
+            options: { type: Type.ARRAY, items: { type: Type.STRING }, description: "An array of 4 options (1 correct, 3 incorrect)." },
+            correctAnswer: { type: Type.STRING, description: "The correct answer from the options." },
           },
         },
       },
     }));
-    return JSON.parse(response.text.trim());
+    const challengeData = JSON.parse(response.text.trim());
+    // Shuffle options to randomize their position
+    challengeData.options.sort(() => Math.random() - 0.5);
+    return challengeData;
   } catch (error) {
     console.error("Error generating daily challenge:", error);
+    // Provide a fallback multiple-choice question
     return {
-      question: "What is the most interesting concept you've learned recently and why?",
-      answer: "This is a reflective question! The answer depends on your unique learning journey."
+      question: "Which of these is a fundamental concept in Computer Science?",
+      options: ["Photosynthesis", "Gravity", "Algorithms", "Sonnet"],
+      correctAnswer: "Algorithms"
     };
   }
 };

@@ -58,8 +58,9 @@ const CardTitle: React.FC<{ children: React.ReactNode; icon?: string }> = ({ chi
 
 const DailyChallenge: React.FC = () => {
     const [studyField] = useLocalStorage<string | null>('studyField', 'General Knowledge');
-    const [challenge, setChallenge] = useState<{ question: string; answer: string } | null>(null);
-    const [isRevealed, setIsRevealed] = useState(false);
+    const [challenge, setChallenge] = useState<{ question: string; options: string[]; correctAnswer: string } | null>(null);
+    const [selectedOption, setSelectedOption] = useState<string | null>(null);
+    const [isAnswered, setIsAnswered] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
 
     useEffect(() => {
@@ -67,17 +68,54 @@ const DailyChallenge: React.FC = () => {
         const storageKey = `dailyChallenge_${today}`;
         const cached = sessionStorage.getItem(storageKey);
 
-        if (cached) {
-            setChallenge(JSON.parse(cached));
-            setIsLoading(false);
-        } else {
+        const fetchNewChallenge = () => {
             generateDailyChallenge(studyField || 'General Knowledge').then(newChallenge => {
                 setChallenge(newChallenge);
                 sessionStorage.setItem(storageKey, JSON.stringify(newChallenge));
+            }).catch(err => {
+                console.error("Failed to fetch new challenge:", err);
+            }).finally(() => {
                 setIsLoading(false);
             });
+        };
+
+        if (cached) {
+            try {
+                const parsed = JSON.parse(cached);
+                if (parsed.options && parsed.correctAnswer) {
+                    setChallenge(parsed);
+                    setIsLoading(false);
+                } else {
+                    sessionStorage.removeItem(storageKey);
+                    fetchNewChallenge();
+                }
+            } catch (e) {
+                sessionStorage.removeItem(storageKey);
+                fetchNewChallenge();
+            }
+        } else {
+            fetchNewChallenge();
         }
     }, [studyField]);
+
+    const handleAnswer = (option: string) => {
+        if (isAnswered) return;
+        setSelectedOption(option);
+        setIsAnswered(true);
+    };
+
+    const getButtonClass = (option: string) => {
+        if (!isAnswered) {
+            return 'bg-slate-100 dark:bg-slate-700 hover:bg-indigo-100 dark:hover:bg-indigo-900';
+        }
+        if (option === challenge?.correctAnswer) {
+            return 'bg-green-500 text-white';
+        }
+        if (option === selectedOption && option !== challenge?.correctAnswer) {
+            return 'bg-red-500 text-white';
+        }
+        return 'bg-slate-100 dark:bg-slate-700 opacity-60';
+    };
 
     return (
         <Card className="md:col-span-2">
@@ -85,23 +123,28 @@ const DailyChallenge: React.FC = () => {
             {isLoading ? (
                 <div className="space-y-3">
                     <div className="w-full h-4 bg-slate-200 dark:bg-slate-700 rounded animate-pulse"></div>
-                    <div className="w-5/6 h-4 bg-slate-200 dark:bg-slate-700 rounded animate-pulse"></div>
+                    <div className="w-5/6 h-4 bg-slate-200 dark:bg-slate-700 rounded animate-pulse mb-4"></div>
+                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div className="w-full h-10 bg-slate-200 dark:bg-slate-700 rounded-lg animate-pulse"></div>
+                        <div className="w-full h-10 bg-slate-200 dark:bg-slate-700 rounded-lg animate-pulse"></div>
+                        <div className="w-full h-10 bg-slate-200 dark:bg-slate-700 rounded-lg animate-pulse"></div>
+                        <div className="w-full h-10 bg-slate-200 dark:bg-slate-700 rounded-lg animate-pulse"></div>
+                    </div>
                 </div>
             ) : challenge ? (
                 <div className="flex-1 flex flex-col justify-between">
                     <p className="text-slate-700 dark:text-slate-300 mb-4">{challenge.question}</p>
-                    <div>
-                        {isRevealed && (
-                            <div className="p-3 bg-indigo-50 dark:bg-indigo-900/50 rounded-lg text-indigo-800 dark:text-indigo-200 animate-fade-in">
-                                <p><strong>Answer:</strong> {challenge.answer}</p>
-                            </div>
-                        )}
-                        <button 
-                            onClick={() => setIsRevealed(!isRevealed)}
-                            className="mt-4 text-sm font-semibold text-indigo-600 dark:text-indigo-400 hover:underline"
-                        >
-                            {isRevealed ? 'Hide Answer' : 'Reveal Answer'}
-                        </button>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        {challenge.options.map((option, index) => (
+                            <button
+                                key={index}
+                                onClick={() => handleAnswer(option)}
+                                disabled={isAnswered}
+                                className={`p-3 rounded-lg text-left font-medium transition ${getButtonClass(option)}`}
+                            >
+                                {option}
+                            </button>
+                        ))}
                     </div>
                 </div>
             ) : (
