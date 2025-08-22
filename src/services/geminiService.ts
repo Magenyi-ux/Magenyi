@@ -1,37 +1,19 @@
+
 import { GoogleGenAI, Type, GenerateContentResponse, GenerateImagesResponse } from "@google/genai";
 import { QuizQuestion, Flashcard, StudyPlanParams } from '../types';
 
-const shortenUrl = (url: string, maxLength: number = 40): string => {
-    if (url.length <= maxLength) {
-        return url;
-    }
-    try {
-        const urlObject = new URL(url);
-        const hostname = urlObject.hostname.replace(/^www\./, '');
-        const pathname = urlObject.pathname.endsWith('/') ? urlObject.pathname.slice(0, -1) : urlObject.pathname;
-        let displayUrl = hostname + pathname;
-
-        if (displayUrl.length > maxLength) {
-            return displayUrl.substring(0, maxLength - 3) + '...';
-        }
-        return displayUrl;
-    } catch (e) {
-        return url.substring(0, maxLength - 3) + '...';
-    }
-};
-
-const apiKeys = (process.env.API_KEY || '').split(',').map(key => key.trim()).filter(key => key);
-if (apiKeys.length === 0) {
-    console.error("API_KEY environment variable is not set or is empty. The app will not function correctly.");
+if (!process.env.API_KEY) {
+  throw new Error("API_KEY environment variable is not set.");
 }
 
+const apiKeys = (process.env.API_KEY || '').split(',').map((key: string) => key.trim()).filter((key: string) => key);
+if (apiKeys.length === 0) {
+    throw new Error("API_KEY environment variable is not set or is empty.");
+}
 let currentApiKeyIndex = 0;
 const getGenAI = () => new GoogleGenAI({ apiKey: apiKeys[currentApiKeyIndex] });
 
 const callApiWithRetries = async <T,>(apiCall: (ai: GoogleGenAI) => Promise<T>): Promise<T> => {
-    if (apiKeys.length === 0) {
-      throw new Error("No API keys are available. Please check your configuration.");
-    }
     const maxRetries = apiKeys.length;
     for (let i = 0; i < maxRetries; i++) {
         try {
@@ -181,7 +163,9 @@ export const generateQuizQuestion = async (subject: string, difficulty: string):
         }},
       },
     }));
-    const quizData = JSON.parse(response.text.trim());
+    const text = response.text;
+    if (!text) throw new Error("Received an empty response from the API.");
+    const quizData = JSON.parse(text.trim());
     quizData.options.sort(() => Math.random() - 0.5);
     return quizData as QuizQuestion;
   } catch (error) { console.error("Error generating quiz question:", error); return null; }
@@ -193,7 +177,7 @@ export const optimizeNote = async (transcript: string): Promise<string> => {
       model: 'gemini-2.5-flash',
       contents: `Take the following raw transcript and structure it into a coherent note. Use headings, bullet points, and bolded keywords to organize the information. Correct any grammatical errors and improve clarity. The output should be well-formatted Markdown.\n\nTranscript:\n${transcript}`,
     }));
-    return response.text;
+    return response.text ?? '';
   } catch (error) { return handleApiError(error, 'optimizeNote'); }
 };
 
@@ -211,7 +195,9 @@ export const generateQuizFromNote = async (noteContent: string): Promise<QuizQue
         }}},
       },
     }));
-    return JSON.parse(response.text.trim()) as QuizQuestion[];
+    const text = response.text;
+    if (!text) throw new Error("Received an empty response from the API.");
+    return JSON.parse(text.trim()) as QuizQuestion[];
   } catch (error) { console.error("Error generating quiz from note:", error); return null; }
 };
 
@@ -228,7 +214,9 @@ export const generateFlashcardsFromNote = async (noteContent: string): Promise<F
         }}},
       },
     }));
-    return JSON.parse(response.text.trim()) as Flashcard[];
+    const text = response.text;
+    if (!text) throw new Error("Received an empty response from the API.");
+    return JSON.parse(text.trim()) as Flashcard[];
   } catch (error) { console.error("Error generating flashcards from note:", error); return null; }
 };
 
@@ -238,7 +226,7 @@ export const submitSuggestion = async (category: string, message: string): Promi
     const response = await callApiWithRetries<GenerateContentResponse>(ai => ai.models.generateContent({
       model: 'gemini-2.5-flash', contents: prompt,
     }));
-    return response.text;
+    return response.text ?? '';
   } catch (error) { return handleApiError(error, 'submitSuggestion'); }
 };
 
@@ -258,7 +246,9 @@ Note: ${noteContent}`;
                 }},
             },
         }));
-        const { script, image_prompt } = JSON.parse(explanationResponse.text.trim());
+        const text = explanationResponse.text;
+        if (!text) throw new Error("Received an empty response from the API.");
+        const { script, image_prompt } = JSON.parse(text.trim());
         if (!script || !image_prompt) throw new Error("Failed to generate script or image prompt.");
 
         try {
@@ -266,7 +256,12 @@ Note: ${noteContent}`;
                 model: 'imagen-3.0-generate-002', prompt: image_prompt,
                 config: { numberOfImages: 1, outputMimeType: 'image/jpeg', aspectRatio: '16:9' },
             }));
-            const base64ImageBytes = imageResponse.generatedImages[0].image.imageBytes;
+            const image = imageResponse.generatedImages?.[0]?.image;
+            if (!image?.imageBytes) {
+                console.error("Image generation succeeded but no image data was returned.");
+                return { script, imageUrl: null };
+            }
+            const base64ImageBytes = image.imageBytes;
             return { script, imageUrl: `data:image/jpeg;base64,${base64ImageBytes}` };
         } catch(imageError) {
             console.error("Image generation failed, returning script only.", imageError);
@@ -298,7 +293,9 @@ For each day, provide a main focus and 2-4 specific, actionable tasks as an arra
                 }}},
             },
         }));
-        return JSON.parse(response.text.trim());
+        const text = response.text;
+        if (!text) throw new Error("Received an empty response from the API.");
+        return JSON.parse(text.trim());
     } catch (error) { console.error("Error generating study plan:", error); return null; }
 };
 
@@ -308,7 +305,7 @@ export const generateAudioRecapScript = async (noteContent: string): Promise<str
         const response = await callApiWithRetries<GenerateContentResponse>(ai => ai.models.generateContent({
             model: 'gemini-2.5-flash', contents: prompt
         }));
-        return response.text;
+        return response.text ?? '';
     } catch (error) { return handleApiError(error, 'generateAudioRecapScript'); }
 };
 
@@ -317,7 +314,8 @@ export const generateExplainerVideo = async (noteContent: string, onProgress: (m
         onProgress("1/4: Crafting video concept...");
         const videoPromptGen = `Based on the following note, create a short, visually engaging prompt for a text-to-video AI. The prompt should describe a simple scene that illustrates the core concept of the note. For example: "A vibrant, animated diagram showing the process of photosynthesis."\n\nNote:\n${noteContent}`;
         const promptResponse = await callApiWithRetries<GenerateContentResponse>(ai => ai.models.generateContent({ model: 'gemini-2.5-flash', contents: videoPromptGen }));
-        const videoPrompt = promptResponse.text.trim();
+        const videoPrompt = (promptResponse.text ?? '').trim();
+        if (!videoPrompt) throw new Error("Could not generate video prompt.");
         
         onProgress("2/4: Sending to video generator...");
         const ai = getGenAI();
@@ -356,7 +354,7 @@ export const generateStudyFact = async (field: string): Promise<string> => {
       model: 'gemini-2.5-flash',
       contents: prompt,
     }));
-    return response.text;
+    return response.text ?? '';
   } catch (error) {
     return handleApiError(error, 'generateStudyFact');
   }
@@ -380,7 +378,9 @@ export const generateDailyChallenge = async (field: string): Promise<{ question:
         },
       },
     }));
-    const challengeData = JSON.parse(response.text.trim());
+    const text = response.text;
+    if (!text) throw new Error("Received an empty response from the API.");
+    const challengeData = JSON.parse(text.trim());
     // Shuffle options to randomize their position
     challengeData.options.sort(() => Math.random() - 0.5);
     return challengeData;

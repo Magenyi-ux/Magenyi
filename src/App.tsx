@@ -1,6 +1,7 @@
 
-import React, { useState, useCallback, useEffect } from 'react';
-import { Page, Theme, UserStats } from './types';
+
+import React, { useState, useCallback, useEffect, useRef } from 'react';
+import { Page, UserStats } from './types';
 import { NAV_ITEMS, INITIAL_STATS } from './constants';
 import { useTheme } from './hooks/useTheme';
 import Header from './components/Header';
@@ -20,13 +21,14 @@ import CalendarPage from './pages/CalendarPage';
 import FAB from './components/FAB';
 import VoiceAssistantModal from './components/VoiceAssistantModal';
 import { NotificationProvider } from './contexts/NotificationContext';
-import Notification from './components/Notification';
+import { Notification } from './components/Notification';
 import { useLocalStorage } from './hooks/useLocalStorage';
 import { useNotification } from './hooks/useNotification';
 import SetupPage from './pages/SetupPage';
 import { useAuth } from './hooks/useAuth';
 import AuthPage from './pages/AuthPage';
 import ApiKeyError from './components/ApiKeyError';
+import IdleScreen from './components/IdleScreen';
 
 
 const AppContent: React.FC = () => {
@@ -41,11 +43,37 @@ const AppContent: React.FC = () => {
   
   const [hasCompletedSetup, setHasCompletedSetup] = useLocalStorage('hasCompletedSetup', false);
   const [, setStudyField] = useLocalStorage<string | null>('studyField', null);
+
+  const [isIdle, setIsIdle] = useState(false);
+  const idleTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const resetIdleTimer = useCallback(() => {
+    if (idleTimer.current) {
+        clearTimeout(idleTimer.current);
+    }
+    setIsIdle(false);
+    idleTimer.current = setTimeout(() => {
+        setIsIdle(true);
+    }, 5 * 60 * 1000); // 5 minutes to idle
+  }, []);
+
+  useEffect(() => {
+    const events = ['mousemove', 'keydown', 'touchstart', 'scroll'];
+    events.forEach(event => window.addEventListener(event, resetIdleTimer));
+    resetIdleTimer();
+
+    return () => {
+        events.forEach(event => window.removeEventListener(event, resetIdleTimer));
+        if (idleTimer.current) {
+            clearTimeout(idleTimer.current);
+        }
+    };
+  }, [resetIdleTimer]);
   
   // Migrate old stats objects for existing users
   useEffect(() => {
     if (stats && stats.stars === undefined) {
-      setStats(prev => ({ ...prev, stars: 1 }));
+      setStats((prev: UserStats) => ({ ...prev, stars: 1 }));
     }
   }, [stats, setStats]);
 
@@ -58,7 +86,7 @@ const AppContent: React.FC = () => {
 
     if (stats.stars < expectedStars) {
       const starsEarned = expectedStars - stats.stars;
-      setStats(prevStats => ({ ...prevStats, stars: expectedStars }));
+      setStats((prevStats: UserStats) => ({ ...prevStats, stars: expectedStars }));
       const starEmoji = '⭐'.repeat(starsEarned);
       showNotification(`You've earned ${starsEarned > 1 ? starsEarned + ' Study Stars' : 'a Study Star'}! ${starEmoji}`, 'success');
     }
@@ -71,7 +99,7 @@ const AppContent: React.FC = () => {
     const startTimer = () => {
       if (interval) return;
       interval = setInterval(() => {
-        setActiveTime(prevTime => prevTime + 1);
+        setActiveTime((prevTime: number) => prevTime + 1);
       }, 1000);
     };
 
@@ -141,7 +169,7 @@ const AppContent: React.FC = () => {
   }, [theme]);
   
   if (!hasCompletedSetup) {
-    return <SetupPage onComplete={(field) => {
+    return <SetupPage onComplete={(field: string | null) => {
         if (field) {
             setStudyField(field);
         }
@@ -150,23 +178,26 @@ const AppContent: React.FC = () => {
   }
 
   return (
-    <div className={`flex h-screen w-full antialiased`}>
-      <Sidebar
-        isOpen={isSidebarOpen}
-        onClose={() => setSidebarOpen(false)}
-        navItems={NAV_ITEMS}
-        currentPage={currentPage}
-        navigate={navigate}
-      />
-      <div className="flex-1 flex flex-col h-full overflow-hidden">
-        <Header onMenuClick={() => setSidebarOpen(true)} currentPage={currentPage} />
-        <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
-          {renderPage()}
-        </main>
+    <>
+      <div className={`flex h-screen w-full antialiased transition-filter duration-500 ${isIdle ? 'blur-sm' : ''}`}>
+        <Sidebar
+          isOpen={isSidebarOpen}
+          onClose={() => setSidebarOpen(false)}
+          navItems={NAV_ITEMS}
+          currentPage={currentPage}
+          navigate={navigate}
+        />
+        <div className="flex-1 flex flex-col h-full overflow-hidden">
+          <Header onMenuClick={() => setSidebarOpen(true)} currentPage={currentPage} />
+          <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
+            {renderPage()}
+          </main>
+        </div>
+        <FAB onClick={() => setVoiceModalOpen(true)} />
+        <VoiceAssistantModal isOpen={isVoiceModalOpen} onClose={() => setVoiceModalOpen(false)} />
       </div>
-      <FAB onClick={() => setVoiceModalOpen(true)} />
-      <VoiceAssistantModal isOpen={isVoiceModalOpen} onClose={() => setVoiceModalOpen(false)} />
-    </div>
+      {isIdle && <IdleScreen />}
+    </>
   );
 };
 

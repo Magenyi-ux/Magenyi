@@ -1,4 +1,5 @@
 
+
 import React, { useState, useCallback, useEffect } from 'react';
 import { Page, Theme, UserStats } from './types';
 import { NAV_ITEMS, INITIAL_STATS } from './constants';
@@ -20,7 +21,7 @@ import CalendarPage from './pages/CalendarPage';
 import FAB from './components/FAB';
 import VoiceAssistantModal from './components/VoiceAssistantModal';
 import { NotificationProvider } from './contexts/NotificationContext';
-import Notification from './components/Notification';
+import { Notification } from './components/Notification';
 import { useLocalStorage } from './hooks/useLocalStorage';
 import { useNotification } from './hooks/useNotification';
 import SetupPage from './pages/SetupPage';
