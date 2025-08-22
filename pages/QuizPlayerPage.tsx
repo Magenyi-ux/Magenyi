@@ -2,14 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useLocalStorage } from '../hooks/useLocalStorage';
 import { QuizQuestion, UserStats, Page } from '../types';
 import XpGainToast from '../components/XpGainToast';
-
-const INITIAL_STATS: UserStats = {
-  score: 0,
-  streak: 0,
-  questionsAttempted: 0,
-  correctAnswers: 0,
-  xp: 0,
-};
+import { INITIAL_STATS } from '../constants';
 
 interface QuizPlayerPageProps {
   navigate: (page: Page) => void;

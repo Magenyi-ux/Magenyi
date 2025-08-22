@@ -5,6 +5,7 @@ import { optimizeNote, generateQuizFromNote, generateFlashcardsFromNote, generat
 import { useSpeech } from '../hooks/useSpeech';
 import QuizReadyModal from '../components/QuizReadyModal';
 import { useActivityLogger } from '../hooks/useActivityLogger';
+import { useNotification } from '../hooks/useNotification';
 
 const LoadingSpinner = () => <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>;
 const CloseIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>;
@@ -23,6 +24,7 @@ const NotesPage: React.FC<NotesPageProps> = ({ navigate }) => {
     const recognitionRef = useRef<any>(null);
     const { speak, availableVoices } = useSpeech();
     const { logActivity } = useActivityLogger();
+    const { showNotification } = useNotification();
 
     const [modalOpen, setModalOpen] = useState<ModalType>(null);
     const [modalNote, setModalNote] = useState<Note | null>(null);
@@ -32,6 +34,8 @@ const NotesPage: React.FC<NotesPageProps> = ({ navigate }) => {
     const [videoData, setVideoData] = useState<{ url: string | null, progress: string }>({ url: null, progress: '' });
     const [flashcards, setFlashcards] = useState<Flashcard[]>([]);
     const [isQuizReady, setIsQuizReady] = useState(false);
+    const [manualTitle, setManualTitle] = useState('');
+    const [manualContent, setManualContent] = useState('');
 
     const handleCreateNote = (content: string, type: 'voice' | 'file' | 'video', rawContent?: string) => {
         const title = content.substring(0, 40).split('\n')[0] + '...';
@@ -42,10 +46,30 @@ const NotesPage: React.FC<NotesPageProps> = ({ navigate }) => {
         else if (type === 'video') logActivity('NOTE_CREATED_VIDEO', { title: newNote.title });
         setViewMode('list');
     };
+    
+    const handleSaveManualNote = () => {
+        if (!manualTitle.trim() || !manualContent.trim()) {
+            showNotification("Title and content cannot be empty.", 'error');
+            return;
+        }
+        const newNote: Note = {
+            id: new Date().toISOString(),
+            subject: 'General',
+            title: manualTitle,
+            content: manualContent,
+            timestamp: Date.now(),
+        };
+        setNotes([newNote, ...notes]);
+        logActivity('NOTE_CREATED_MANUAL', { title: newNote.title });
+        showNotification("Note saved successfully!", 'success');
+        setManualTitle('');
+        setManualContent('');
+        setViewMode('list');
+    };
 
     const startRecording = () => {
         const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-        if (!SpeechRecognition) { alert("Speech Recognition API is not supported in this browser."); return; }
+        if (!SpeechRecognition) { showNotification("Speech Recognition API is not supported in this browser.", 'error'); return; }
         const recognition = new SpeechRecognition();
         recognition.continuous = true; recognition.interimResults = false; recognition.lang = 'en-US';
         recognitionRef.current = recognition;
@@ -86,14 +110,14 @@ const NotesPage: React.FC<NotesPageProps> = ({ navigate }) => {
             sessionStorage.setItem('activeQuiz', JSON.stringify(questions));
             logActivity('NOTE_QUIZ_GENERATED', { noteId: note.id });
             setIsQuizReady(true);
-        } else alert("Failed to generate quiz.");
+        } else showNotification("Failed to generate quiz.", 'error');
         setIsLoading(false);
     };
 
     const beginQuiz = () => { setIsQuizReady(false); navigate('Quiz'); };
-    const generateAndShowFlashcards = async (note: Note) => { setIsLoading(true); setModalNote(note); const cards = await generateFlashcardsFromNote(note.content); if (cards) { setFlashcards(cards); logActivity('NOTE_FLASHCARDS_GENERATED', { noteId: note.id }); setModalOpen('flashcards'); } else alert("Failed to generate flashcards."); setIsLoading(false); };
-    const handleExplain = async (note: Note) => { setIsLoading(true); setModalNote(note); try { const data = await generateExplanation(note.content); setExplanationData(data); logActivity('NOTE_EXPLAINED', { noteId: note.id }); setModalOpen('explanation'); } catch (e: any) { alert(e.message); } setIsLoading(false); };
-    const handleAudioRecap = async (note: Note) => { setIsLoading(true); setModalNote(note); try { const script = await generateAudioRecapScript(note.content); setAudioRecapData({ script }); logActivity('AUDIO_RECAP_GENERATED', { noteId: note.id }); setModalOpen('audio'); } catch (e) { alert("Failed to generate audio recap."); } setIsLoading(false); };
+    const generateAndShowFlashcards = async (note: Note) => { setIsLoading(true); setModalNote(note); const cards = await generateFlashcardsFromNote(note.content); if (cards) { setFlashcards(cards); logActivity('NOTE_FLASHCARDS_GENERATED', { noteId: note.id }); setModalOpen('flashcards'); } else showNotification("Failed to generate flashcards.", 'error'); setIsLoading(false); };
+    const handleExplain = async (note: Note) => { setIsLoading(true); setModalNote(note); try { const data = await generateExplanation(note.content); setExplanationData(data); logActivity('NOTE_EXPLAINED', { noteId: note.id }); setModalOpen('explanation'); } catch (e: any) { showNotification(e.message, 'error'); } setIsLoading(false); };
+    const handleAudioRecap = async (note: Note) => { setIsLoading(true); setModalNote(note); try { const script = await generateAudioRecapScript(note.content); setAudioRecapData({ script }); logActivity('AUDIO_RECAP_GENERATED', { noteId: note.id }); setModalOpen('audio'); } catch (e) { showNotification("Failed to generate audio recap.", 'error'); } setIsLoading(false); };
     const handleExplainerVideo = async (note: Note) => { setIsLoading(true); setModalNote(note); setModalOpen('video'); try { const url = await generateExplainerVideo(note.content, (progress) => setVideoData({ url: null, progress })); setVideoData({ url, progress: 'Video ready!' }); logActivity('VIDEO_GENERATED', { noteId: note.id }); } catch (e: any) { setVideoData({ url: null, progress: e.message }); } setIsLoading(false); };
 
     const closeModal = () => {
@@ -166,26 +190,62 @@ const NotesPage: React.FC<NotesPageProps> = ({ navigate }) => {
             )}
             {viewMode === 'create' && (
                 <div>
-                    <h2 className="text-3xl font-bold mb-6">Create a New Note</h2>
-                    <div className="grid md:grid-cols-2 gap-6">
-                        <div className="bg-white dark:bg-slate-800 p-6 rounded-lg shadow-md flex flex-col items-center justify-center text-center">
-                            <h3 className="text-xl font-bold mb-4">Record Live Lecture</h3>
-                            <p className="text-slate-500 mb-4">Record audio and our AI will transcribe and organize it into a structured note.</p>
-                            <button onClick={isRecording ? stopRecording : startRecording} disabled={isLoading || (isRecording && !availableVoices)} className={`w-20 h-20 rounded-full flex items-center justify-center transition-colors ${isRecording ? 'bg-red-500 hover:bg-red-600' : 'bg-indigo-600 hover:bg-indigo-700'} disabled:bg-slate-400`}>
-                                {isLoading ? <LoadingSpinner /> : <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-14 0m7 10v4M5 11v3a7 7 0 0014 0v-3m-7-5a3 3 0 013 3v2a3 3 0 01-6 0v-2a3 3 0 013-3z" /></svg>}
-                            </button>
-                            {isRecording && <p className="mt-4 text-red-500 animate-pulse">Recording... Click to stop.</p>}
+                    <div className="flex justify-between items-center mb-6">
+                        <h2 className="text-3xl font-bold">Create a New Note</h2>
+                        <button onClick={() => setViewMode('list')} className="text-indigo-600 dark:text-indigo-400 font-semibold hover:underline">← Back to Notes</button>
+                    </div>
+                    
+                    <div className="bg-white dark:bg-slate-800 p-6 rounded-lg shadow-md mb-8">
+                        <div className="space-y-4">
+                            <div>
+                                <label htmlFor="note-title" className="block text-lg font-semibold mb-2">Note Title</label>
+                                <input
+                                    id="note-title"
+                                    type="text"
+                                    value={manualTitle}
+                                    onChange={(e) => setManualTitle(e.target.value)}
+                                    placeholder="e.g., Photosynthesis Key Concepts"
+                                    className="w-full p-3 border-2 border-slate-300 dark:border-slate-600 rounded-lg bg-slate-50 dark:bg-slate-700 focus:ring-2 focus:ring-indigo-500"
+                                />
+                            </div>
+                            <div>
+                                <label htmlFor="note-content" className="block text-lg font-semibold mb-2">Note Content</label>
+                                <textarea
+                                    id="note-content"
+                                    value={manualContent}
+                                    onChange={(e) => setManualContent(e.target.value)}
+                                    placeholder="Start typing your notes here... You can use Markdown for formatting."
+                                    rows={10}
+                                    className="w-full p-3 border-2 border-slate-300 dark:border-slate-600 rounded-lg bg-slate-50 dark:bg-slate-700 focus:ring-2 focus:ring-indigo-500"
+                                />
+                            </div>
                         </div>
-                        <div className="bg-white dark:bg-slate-800 p-6 rounded-lg shadow-md flex flex-col items-center justify-center text-center">
-                            <h3 className="text-xl font-bold mb-4">Upload a File</h3>
-                            <p className="text-slate-500 mb-4">Upload a .txt file and we'll convert it into an optimized note.</p>
-                            <label className="bg-indigo-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-indigo-700 transition cursor-pointer">
-                                {isLoading ? 'Processing...' : 'Choose File'}
-                                <input type="file" accept=".txt" onChange={handleFileUpload} disabled={isLoading} className="hidden" />
-                            </label>
+                        <button onClick={handleSaveManualNote} className="mt-6 w-full bg-green-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-green-700 transition">
+                            Save Note
+                        </button>
+                    </div>
+                    
+                    <div>
+                        <h3 className="text-2xl font-bold mb-4 text-center text-slate-700 dark:text-slate-300">Or use AI Note Tools</h3>
+                        <div className="grid md:grid-cols-2 gap-6">
+                             <div className="bg-white dark:bg-slate-800 p-6 rounded-lg shadow-md flex flex-col items-center justify-center text-center">
+                                <h3 className="text-xl font-bold mb-4">Record Live Lecture</h3>
+                                <p className="text-slate-500 mb-4">Record audio and our AI will transcribe and organize it into a structured note.</p>
+                                <button onClick={isRecording ? stopRecording : startRecording} disabled={isLoading || (isRecording && !availableVoices)} className={`w-20 h-20 rounded-full flex items-center justify-center transition-colors ${isRecording ? 'bg-red-500 hover:bg-red-600' : 'bg-indigo-600 hover:bg-indigo-700'} disabled:bg-slate-400`}>
+                                    {isLoading ? <LoadingSpinner /> : <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-14 0m7 10v4M5 11v3a7 7 0 0014 0v-3m-7-5a3 3 0 013 3v2a3 3 0 01-6 0v-2a3 3 0 013-3z" /></svg>}
+                                </button>
+                                {isRecording && <p className="mt-4 text-red-500 animate-pulse">Recording... Click to stop.</p>}
+                            </div>
+                            <div className="bg-white dark:bg-slate-800 p-6 rounded-lg shadow-md flex flex-col items-center justify-center text-center">
+                                <h3 className="text-xl font-bold mb-4">Upload a File</h3>
+                                <p className="text-slate-500 mb-4">Upload a .txt file and we'll convert it into an optimized note.</p>
+                                <label className="bg-indigo-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-indigo-700 transition cursor-pointer">
+                                    {isLoading ? 'Processing...' : 'Choose File'}
+                                    <input type="file" accept=".txt" onChange={handleFileUpload} disabled={isLoading} className="hidden" />
+                                </label>
+                            </div>
                         </div>
                     </div>
-                    <button onClick={() => setViewMode('list')} className="mt-8 text-indigo-600 dark:text-indigo-400 font-semibold hover:underline">← Back to Notes</button>
                 </div>
             )}
             <QuizReadyModal isOpen={isQuizReady} onClose={() => setIsQuizReady(false)} onBeginQuiz={beginQuiz} />

@@ -3,14 +3,7 @@
 import React from 'react';
 import { useLocalStorage } from '../hooks/useLocalStorage';
 import { UserStats } from '../types';
-
-const INITIAL_STATS: UserStats = {
-  score: 0,
-  streak: 0,
-  questionsAttempted: 0,
-  correctAnswers: 0,
-  xp: 0,
-};
+import { INITIAL_STATS } from '../constants';
 
 const MiniProgressTracker: React.FC = () => {
     const [stats] = useLocalStorage<UserStats>('userStats', INITIAL_STATS);

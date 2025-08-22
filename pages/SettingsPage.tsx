@@ -2,19 +2,13 @@ import React from 'react';
 import { Theme, UserStats } from '../types';
 import { useSpeech } from '../hooks/useSpeech';
 import { useLocalStorage } from '../hooks/useLocalStorage';
+import { useNotification } from '../hooks/useNotification';
+import { INITIAL_STATS } from '../constants';
 
 interface SettingsPageProps {
   theme: Theme;
   setTheme: (theme: Theme) => void;
 }
-
-const INITIAL_STATS: UserStats = {
-  score: 0,
-  streak: 0,
-  questionsAttempted: 0,
-  correctAnswers: 0,
-  xp: 0,
-};
 
 const ThemeToggle: React.FC<SettingsPageProps> = ({ theme, setTheme }) => {
     const isDark = theme === 'dark';
@@ -35,14 +29,18 @@ const ThemeToggle: React.FC<SettingsPageProps> = ({ theme, setTheme }) => {
 const SettingsPage: React.FC<SettingsPageProps> = ({ theme, setTheme }) => {
     const { availableVoices, saveSelectedVoice, speak, getSelectedVoiceName } = useSpeech();
     const [stats] = useLocalStorage<UserStats>('userStats', INITIAL_STATS);
+    const [idleTimeout, setIdleTimeout] = useLocalStorage<number>('idleTimeoutSeconds', 5);
     const selectedVoiceName = getSelectedVoiceName();
+    const { showNotification } = useNotification();
     
     const clearAppData = () => {
         if (window.confirm('Are you sure you want to delete all your notes and practice stats? This action cannot be undone.')) {
             localStorage.removeItem('notes');
             localStorage.removeItem('userStats');
-            alert('Your notes and practice stats have been cleared.');
-            window.location.reload();
+            localStorage.removeItem('activeTime');
+            showNotification('Your notes and practice stats have been cleared.', 'success');
+            // We can't reload here as it would clear the notification state
+            // The app will reflect the cleared state on next navigation
         }
     };
 
@@ -113,6 +111,25 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ theme, setTheme }) => {
                     ) : (
                         <p className="text-sm text-slate-500">Loading voices or none available. The system default will be used.</p>
                     )}
+                </div>
+
+                <div className="border-t border-slate-200 dark:border-slate-700"></div>
+                
+                <div>
+                    <h3 className="text-lg font-semibold">Idle Screensaver</h3>
+                    <p className="text-sm text-slate-500 mb-4">Set the inactivity time before the spinning donut appears (in seconds).</p>
+                    <div className="flex items-center gap-4">
+                        <input
+                            type="range"
+                            min="1"
+                            max="60"
+                            value={idleTimeout}
+                            onChange={(e) => setIdleTimeout(Number(e.target.value))}
+                            className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer dark:bg-slate-700"
+                            aria-label="Idle timeout in seconds"
+                        />
+                        <span className="font-semibold w-12 text-center text-slate-700 dark:text-slate-300">{idleTimeout}s</span>
+                    </div>
                 </div>
 
                 <div className="border-t border-slate-200 dark:border-slate-700"></div>

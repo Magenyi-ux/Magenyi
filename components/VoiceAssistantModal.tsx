@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import * as THREE from 'three';
 import { solveMathProblem } from '../services/geminiService';
 import { useSpeech } from '../hooks/useSpeech';
+import { useNotification } from '../hooks/useNotification';
 
 interface VoiceAssistantModalProps {
   isOpen: boolean;
@@ -290,6 +291,7 @@ const VoiceAssistantModal: React.FC<VoiceAssistantModalProps> = ({ isOpen, onClo
   const recognitionRef = useRef<any>(null);
   const statusRef = useRef(status);
   const { speak } = useSpeech();
+  const { showNotification } = useNotification();
 
   useEffect(() => {
     statusRef.current = status;
@@ -368,7 +370,7 @@ const VoiceAssistantModal: React.FC<VoiceAssistantModalProps> = ({ isOpen, onClo
         // Start listening.
         const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
         if (!SpeechRecognition) {
-          alert("Speech Recognition API is not supported in this browser.");
+          showNotification("Speech Recognition API is not supported.", 'error');
           return;
         }
 
@@ -410,7 +412,7 @@ const VoiceAssistantModal: React.FC<VoiceAssistantModalProps> = ({ isOpen, onClo
       default:
         break;
     }
-  }, [status, performSpeak]);
+  }, [status, performSpeak, showNotification]);
   
     // This effect handles auto-listening after the AI finishes speaking
     useEffect(() => {

@@ -2,14 +2,7 @@
 import React from 'react';
 import { useLocalStorage } from '../hooks/useLocalStorage';
 import { Note, UserStats } from '../types';
-
-const INITIAL_STATS: UserStats = {
-  score: 0,
-  streak: 0,
-  questionsAttempted: 0,
-  correctAnswers: 0,
-  xp: 0,
-};
+import { INITIAL_STATS } from '../constants';
 
 const ProfilePage: React.FC = () => {
     const [notes] = useLocalStorage<Note[]>('notes', []);
@@ -22,12 +15,12 @@ const ProfilePage: React.FC = () => {
 
             <div className="bg-white dark:bg-slate-800 p-8 rounded-lg shadow-lg flex flex-col items-center space-y-6">
                 <div className="w-32 h-32 rounded-full bg-indigo-500 flex items-center justify-center text-white text-5xl font-bold border-4 border-white dark:border-slate-700 shadow-md">
-                    <span>U</span>
+                    <span>L</span>
                 </div>
                 
                 <div className="text-center">
-                    <h3 className="text-2xl font-bold">User One</h3>
-                    <p className="text-slate-500 dark:text-slate-400">user.one@example.com</p>
+                    <h3 className="text-2xl font-bold">Learner</h3>
+                    <p className="text-slate-500 dark:text-slate-400">Welcome to your learning journey!</p>
                 </div>
 
                 <div className="border-t border-slate-200 dark:border-slate-700 w-full my-4"></div>
@@ -58,6 +51,10 @@ const ProfilePage: React.FC = () => {
                          <div className="bg-slate-100 dark:bg-slate-700 p-4 rounded-lg">
                             <p className="text-sm text-slate-500 dark:text-slate-400">Current Streak</p>
                             <p className="text-2xl font-bold">{stats.streak} 🔥</p>
+                        </div>
+                        <div className="bg-slate-100 dark:bg-slate-700 p-4 rounded-lg">
+                            <p className="text-sm text-slate-500 dark:text-slate-400">Study Stars</p>
+                            <p className="text-2xl font-bold">{stats.stars} ⭐</p>
                         </div>
                      </div>
                 </div>

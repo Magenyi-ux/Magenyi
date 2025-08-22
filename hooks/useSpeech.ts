@@ -12,6 +12,33 @@ export interface MappedVoice {
   voice: SpeechSynthesisVoice;
 }
 
+// Helper function to clean text from markdown for better speech synthesis
+const cleanTextForSpeech = (text: string): string => {
+  return text
+    // Handle markdown links, keeping only the link text
+    .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
+    // Remove bold/italics markers but keep content
+    .replace(/\*\*(.*?)\*\*/g, '$1')
+    .replace(/__(.*?)__/g, '$1')
+    .replace(/\*(.*?)\*/g, '$1')
+    .replace(/_(.*?)_/g, '$1')
+    // Remove headings markers
+    .replace(/^#{1,6}\s+/gm, '')
+    // Remove code backticks
+    .replace(/`/g, '')
+    // Remove horizontal rules
+    .replace(/^-{3,}\s*$/gm, '')
+    // Remove blockquotes
+    .replace(/^>\s*/gm, '')
+    // Remove list markers
+    .replace(/^\s*[-*+]\s+/gm, '')
+    // Remove image tags but keep alt text
+    .replace(/!\[([^\]]*)\]\([^)]+\)/g, '$1')
+    // The user's specific request
+    .replace(/asterisks|asterritkers/gi, '');
+};
+
+
 // A custom hook to manage speech synthesis functionality
 export const useSpeech = () => {
   const [availableVoices, setAvailableVoices] = useState<MappedVoice[]>([]);
@@ -101,7 +128,8 @@ export const useSpeech = () => {
     
     window.speechSynthesis.cancel(); // Stop any currently speaking utterance
     
-    const utterance = new SpeechSynthesisUtterance(text);
+    const cleanedText = cleanTextForSpeech(text);
+    const utterance = new SpeechSynthesisUtterance(cleanedText);
     
     // Use the explicitly provided voice, the user's selected voice, or the first available mapped voice as a fallback.
     const voiceToUse = voice || selectedVoice || (availableVoices.length > 0 ? availableVoices[0].voice : null);

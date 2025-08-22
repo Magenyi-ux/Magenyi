@@ -3,6 +3,7 @@
 import React from 'react';
 import { Page } from '../types';
 import MiniProgressTracker from './MiniProgressTracker';
+import StudyFact from './StudyFact';
 
 interface HeaderProps {
   onMenuClick: () => void;
@@ -25,7 +26,10 @@ const Header: React.FC<HeaderProps> = ({ onMenuClick, currentPage }) => {
         </button>
         <h1 className="text-xl font-bold ml-4">{currentPage}</h1>
       </div>
-      <MiniProgressTracker />
+      <div className="flex items-center gap-4">
+        <StudyFact />
+        <MiniProgressTracker />
+      </div>
     </header>
   );
 };

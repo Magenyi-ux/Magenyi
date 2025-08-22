@@ -9,6 +9,7 @@ import Whiteboard, { WhiteboardRef } from '../components/Whiteboard';
 import SolutionDisplay from '../components/SolutionDisplay';
 import WhiteboardToolbar from '../components/WhiteboardToolbar';
 import { useActivityLogger } from '../hooks/useActivityLogger';
+import { useNotification } from '../hooks/useNotification';
 
 type SolverMode = 'text' | 'whiteboard' | 'visual';
 
@@ -25,6 +26,7 @@ const SolverPage: React.FC = () => {
   const whiteboardRef = useRef<WhiteboardRef>(null);
   const [solvedImage, setSolvedImage] = useState<string | null>(null);
   const { logActivity } = useActivityLogger();
+  const { showNotification } = useNotification();
 
   // Visual Q&A state
   const [visualImage, setVisualImage] = useState<{ file: File; dataUrl: string } | null>(null);
@@ -134,7 +136,7 @@ const SolverPage: React.FC = () => {
         content: contentToSave, timestamp: Date.now(),
     };
     setNotes([newNote, ...notes]);
-    alert("Solution saved to Notes!");
+    showNotification("Solution saved to Notes!", 'success');
   };
 
   const whiteboardContainerClasses = isWhiteboardFullscreen

@@ -31,6 +31,7 @@ export interface UserStats {
   questionsAttempted: number;
   correctAnswers: number;
   xp: number;
+  stars: number;
 }
 
 export interface Flashcard {
@@ -43,6 +44,13 @@ export type ChatMessage = {
   content: string;
 };
 
+export interface User {
+  id: string;
+  username: string;
+  email: string;
+  passwordHash?: string;
+}
+
 // New types for activity logging
 export type ActivityType =
   | 'SOLVED_PROBLEM_TEXT'
@@ -51,6 +59,7 @@ export type ActivityType =
   | 'PRACTICE_ANSWER'
   | 'NOTE_CREATED_VOICE'
   | 'NOTE_CREATED_FILE'
+  | 'NOTE_CREATED_MANUAL'
   | 'NOTE_CREATED_VIDEO'
   | 'NOTE_QUIZ_GENERATED'
   | 'NOTE_FLASHCARDS_GENERATED'
@@ -69,4 +78,12 @@ export interface Activity {
   type: ActivityType;
   timestamp: number;
   details: Record<string, any>;
+}
+
+// Types for the new notification system
+export type NotificationType = 'success' | 'error' | 'info';
+
+export interface NotificationMessage {
+  message: string;
+  type: NotificationType;
 }

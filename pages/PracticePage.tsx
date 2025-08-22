@@ -6,14 +6,7 @@ import { generateQuizQuestion } from '../services/geminiService';
 import { QuizQuestion, UserStats } from '../types';
 import XpGainToast from '../components/XpGainToast';
 import { useActivityLogger } from '../hooks/useActivityLogger';
-
-const INITIAL_STATS: UserStats = {
-  score: 0,
-  streak: 0,
-  questionsAttempted: 0,
-  correctAnswers: 0,
-  xp: 0,
-};
+import { INITIAL_STATS } from '../constants';
 
 const StatCard: React.FC<{ label: string; value: string | number; icon: string }> = ({ label, value, icon }) => (
     <div className="bg-white dark:bg-slate-800 p-4 rounded-lg shadow-md flex items-center">
