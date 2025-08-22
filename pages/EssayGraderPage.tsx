@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
-import { gradeEssay } from '../services/geminiService';
+import { gradeEssayStream } from '../services/geminiService';
 import { useActivityLogger } from '../hooks/useActivityLogger';
 
 const LoadingSpinner = () => <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>;
+const BlinkingCursor: React.FC = () => <span className="inline-block w-2 h-4 bg-slate-700 dark:bg-slate-300 animate-pulse ml-1 align-bottom"></span>;
 
-const MarkdownRenderer: React.FC<{ content: string }> = ({ content }) => {
+const MarkdownRenderer: React.FC<{ content: string; isStreaming?: boolean }> = ({ content, isStreaming }) => {
     // A simple markdown renderer to handle headings, bold text, and lists.
     const sections = content.split(/(?=###\s)/g);
     return (
@@ -31,6 +32,7 @@ const MarkdownRenderer: React.FC<{ content: string }> = ({ content }) => {
                     </div>
                 );
             })}
+            {isStreaming && <BlinkingCursor />}
         </div>
     );
 };
@@ -46,10 +48,21 @@ const EssayGraderPage: React.FC = () => {
         if (!essay.trim()) return;
         setIsLoading(true);
         setFeedback('');
-        const result = await gradeEssay(essay);
-        setFeedback(result);
-        setIsLoading(false);
-        logActivity('ESSAY_GRADED');
+        
+        try {
+            const stream = gradeEssayStream(essay);
+            let fullFeedback = '';
+            for await (const chunk of stream) {
+                fullFeedback += chunk;
+                setFeedback(fullFeedback);
+            }
+            logActivity('ESSAY_GRADED');
+        } catch(e) {
+            console.error(e);
+            setFeedback("Sorry, an error occurred while grading your essay.");
+        } finally {
+            setIsLoading(false);
+        }
     };
 
     return (
@@ -79,7 +92,7 @@ const EssayGraderPage: React.FC = () => {
                 </div>
                 <div className="bg-white dark:bg-slate-800 p-6 rounded-lg shadow-lg">
                     <h3 className="text-xl font-bold mb-4">Feedback</h3>
-                    {isLoading && !feedback && (
+                    {isLoading && !feedback ? (
                          <div className="space-y-4 pt-4">
                             <div className="h-4 bg-slate-200 dark:bg-slate-700 rounded w-1/3 animate-pulse"></div>
                             <div className="h-3 bg-slate-200 dark:bg-slate-700 rounded w-full animate-pulse"></div>
@@ -87,11 +100,10 @@ const EssayGraderPage: React.FC = () => {
                              <div className="h-4 bg-slate-200 dark:bg-slate-700 rounded w-1/2 mt-6 animate-pulse"></div>
                             <div className="h-3 bg-slate-200 dark:bg-slate-700 rounded w-full animate-pulse"></div>
                          </div>
-                    )}
-                    {feedback ? (
-                        <MarkdownRenderer content={feedback} />
+                    ) : feedback ? (
+                        <MarkdownRenderer content={feedback} isStreaming={isLoading} />
                     ) : (
-                        !isLoading && <p className="text-slate-500 pt-4 text-center">Your feedback will appear here.</p>
+                        <p className="text-slate-500 pt-4 text-center">Your feedback will appear here.</p>
                     )}
                 </div>
             </div>

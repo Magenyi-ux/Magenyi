@@ -1,12 +1,13 @@
-
 import React, { useState } from 'react';
 import { useLocalStorage } from '../hooks/useLocalStorage';
 import { Note } from '../types';
-import { summarizeYouTubeURL } from '../services/geminiService';
+import { summarizeYouTubeURLStream } from '../services/geminiService';
 import { useActivityLogger } from '../hooks/useActivityLogger';
 import { useNotification } from '../hooks/useNotification';
 
 const LoadingSpinner = () => <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>;
+const BlinkingCursor: React.FC = () => <span className="inline-block w-2 h-4 bg-slate-700 dark:bg-slate-300 animate-pulse ml-1 align-bottom"></span>;
+
 
 const YouTubeSummarizerPage: React.FC = () => {
     const [notes, setNotes] = useLocalStorage<Note[]>('notes', []);
@@ -28,11 +29,15 @@ const YouTubeSummarizerPage: React.FC = () => {
         setSummary('');
 
         try {
-            const result = await summarizeYouTubeURL(url);
-            if (!result) {
-                throw new Error("Failed to get a summary from the AI.");
+            let fullSummary = "";
+            const stream = summarizeYouTubeURLStream(url);
+            for await (const chunk of stream) {
+                fullSummary += chunk;
+                setSummary(fullSummary);
             }
-            setSummary(result);
+            if (!fullSummary) {
+                 throw new Error("Failed to get a summary from the AI.");
+            }
             setResultTitle(`Summary of ${url}`);
         } catch (e) {
             console.error(e);
@@ -142,7 +147,10 @@ const YouTubeSummarizerPage: React.FC = () => {
                     
                     <div className="prose prose-slate dark:prose-invert max-w-none mb-6">
                         {summary ? (
-                            renderMarkdown(summary)
+                            <>
+                                {renderMarkdown(summary)}
+                                {isLoading && <BlinkingCursor />}
+                            </>
                         ) : (
                            <div className="space-y-3">
                                 <div className="w-full h-4 bg-slate-200 dark:bg-slate-700 rounded animate-pulse"></div>

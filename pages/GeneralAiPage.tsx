@@ -1,8 +1,7 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { useLocalStorage } from '../hooks/useLocalStorage';
 import { ChatMessage } from '../types';
-import { getAiTutorResponse } from '../services/geminiService';
+import { getAiTutorResponseStream } from '../services/geminiService';
 import { useActivityLogger } from '../hooks/useActivityLogger';
 
 const SendIcon = () => (
@@ -14,7 +13,7 @@ const SendIcon = () => (
 const UserIcon = () => <div className="w-8 h-8 rounded-full bg-slate-500 flex items-center justify-center font-bold text-white flex-shrink-0">U</div>;
 const AiIcon = () => <div className="w-8 h-8 rounded-full bg-indigo-500 flex items-center justify-center font-bold text-white flex-shrink-0">AI</div>;
 
-const MarkdownRenderer: React.FC<{ content: string }> = ({ content }) => {
+const MarkdownRenderer: React.FC<{ content: string; isStreaming?: boolean }> = ({ content, isStreaming }) => {
   const renderContent = () => {
     return content.split('\n').map((line, index) => {
       // Bold text
@@ -31,7 +30,12 @@ const MarkdownRenderer: React.FC<{ content: string }> = ({ content }) => {
     });
   };
 
-  return <div className="prose prose-slate dark:prose-invert max-w-none">{renderContent()}</div>;
+  return (
+    <div className="prose prose-slate dark:prose-invert max-w-none">
+      {renderContent()}
+      {isStreaming && <span className="inline-block w-2 h-4 bg-slate-700 dark:bg-slate-300 animate-pulse ml-1 align-bottom"></span>}
+    </div>
+  );
 };
 
 
@@ -55,21 +59,43 @@ const AiTutorPage: React.FC = () => {
     if (!input.trim() || isLoading) return;
 
     const userMessage: ChatMessage = { role: 'user', content: input };
-    setMessages(prev => [...prev, userMessage]);
-    logActivity('CHAT_MESSAGE_SENT');
+    const currentInput = input;
     setInput('');
+    
+    // Add user message and a placeholder for AI's response
+    setMessages(prev => [...prev, userMessage, { role: 'model', content: '' }]);
+    logActivity('CHAT_MESSAGE_SENT');
     setIsLoading(true);
 
-    const historyForApi = messages.map(msg => ({
+    const historyForApi = [...messages, userMessage].map(msg => ({
       role: msg.role,
       parts: [{ text: msg.content }],
     }));
-
-    const aiResponseContent = await getAiTutorResponse(input, historyForApi as any);
-    const aiMessage: ChatMessage = { role: 'model', content: aiResponseContent };
     
-    setMessages(prev => [...prev, aiMessage]);
-    setIsLoading(false);
+    try {
+        const stream = getAiTutorResponseStream(currentInput, historyForApi as any);
+        for await (const chunk of stream) {
+            setMessages(prev => {
+                const newMessages = [...prev];
+                const lastMessage = newMessages[newMessages.length - 1];
+                if (lastMessage.role === 'model') {
+                    lastMessage.content += chunk;
+                }
+                return newMessages;
+            });
+        }
+    } catch(err) {
+        setMessages(prev => {
+            const newMessages = [...prev];
+            const lastMessage = newMessages[newMessages.length - 1];
+            if (lastMessage.role === 'model') {
+                lastMessage.content = "Sorry, I encountered an error. Please try again.";
+            }
+            return newMessages;
+        });
+    } finally {
+        setIsLoading(false);
+    }
   };
 
   const handleClearChat = () => {
@@ -97,21 +123,14 @@ const AiTutorPage: React.FC = () => {
           <div key={index} className={`flex items-start gap-3 ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}>
             {message.role === 'model' && <AiIcon />}
             <div className={`max-w-xl p-3 rounded-lg shadow ${message.role === 'user' ? 'bg-indigo-500 text-white' : 'bg-slate-100 dark:bg-slate-700'}`}>
-              <MarkdownRenderer content={message.content} />
+              <MarkdownRenderer 
+                content={message.content}
+                isStreaming={isLoading && index === messages.length - 1}
+              />
             </div>
             {message.role === 'user' && <UserIcon />}
           </div>
         ))}
-        {isLoading && (
-          <div className="flex items-start gap-3 justify-start">
-             <AiIcon />
-             <div className="max-w-xl p-3 rounded-lg shadow bg-slate-100 dark:bg-slate-700 flex items-center space-x-2">
-                <span className="h-2 w-2 bg-slate-500 rounded-full animate-bounce [animation-delay:-0.3s]"></span>
-                <span className="h-2 w-2 bg-slate-500 rounded-full animate-bounce [animation-delay:-0.15s]"></span>
-                <span className="h-2 w-2 bg-slate-500 rounded-full animate-bounce"></span>
-             </div>
-          </div>
-        )}
         <div ref={messagesEndRef} />
       </div>
 

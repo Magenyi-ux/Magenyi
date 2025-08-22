@@ -1,8 +1,7 @@
-
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useLocalStorage } from '../hooks/useLocalStorage';
 import { useTheme } from '../hooks/useTheme';
-import { solveMathProblem, askQuestionAboutImage } from '../services/geminiService';
+import { solveMathProblemStream, askQuestionAboutImageStream } from '../services/geminiService';
 import { Note } from '../types';
 import SolverTabs from '../components/SolverTabs';
 import Whiteboard, { WhiteboardRef } from '../components/Whiteboard';
@@ -67,9 +66,18 @@ const SolverPage: React.FC = () => {
   const handleTextSolve = async () => {
     if (!inputValue.trim()) { setError('Please enter a question.'); return; }
     setError(''); setIsLoading(true); setSolution(''); setSolvedImage(null);
-    const result = await solveMathProblem(inputValue);
-    setSolution(result);
-    setIsLoading(false);
+    
+    try {
+        const stream = solveMathProblemStream(inputValue);
+        for await (const chunk of stream) {
+            setSolution(prev => prev + chunk);
+        }
+    } catch (e: any) {
+        setError(e.message || "An error occurred.");
+    } finally {
+        setIsLoading(false);
+    }
+    
     logActivity('SOLVED_PROBLEM_TEXT', { title: inputValue.substring(0, 50) });
   };
 
@@ -84,9 +92,18 @@ const SolverPage: React.FC = () => {
         setError('Could not process image data.'); setIsLoading(false); return;
     }
     setSolvedImage(imageDataURL);
-    const result = await askQuestionAboutImage(imageData, 'image/png', "First, transcribe the handwritten text or describe the diagram in this image. Then, provide a detailed explanation or solution based on the content.");
-    setSolution(result);
-    setIsLoading(false);
+
+    try {
+        const stream = askQuestionAboutImageStream(imageData, 'image/png', "First, transcribe the handwritten text or describe the diagram in this image. Then, provide a detailed explanation or solution based on the content.");
+        for await (const chunk of stream) {
+            setSolution(prev => prev + chunk);
+        }
+    } catch (e: any) {
+        setError(e.message || "An error occurred.");
+    } finally {
+        setIsLoading(false);
+    }
+
     logActivity('SOLVED_PROBLEM_WHITEBOARD');
   };
 
@@ -100,9 +117,18 @@ const SolverPage: React.FC = () => {
         setError('Could not process the uploaded image.'); setIsLoading(false); return;
     }
     setSolvedImage(visualImage.dataUrl);
-    const result = await askQuestionAboutImage(base64Image, visualImage.file.type, visualQuestion);
-    setSolution(result);
-    setIsLoading(false);
+    
+    try {
+        const stream = askQuestionAboutImageStream(base64Image, visualImage.file.type, visualQuestion);
+        for await (const chunk of stream) {
+            setSolution(prev => prev + chunk);
+        }
+    } catch (e: any) {
+        setError(e.message || "An error occurred.");
+    } finally {
+        setIsLoading(false);
+    }
+
     logActivity('VISUAL_QUESTION_ASKED', { question: visualQuestion.substring(0, 50) });
   };
 

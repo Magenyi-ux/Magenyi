@@ -1,7 +1,5 @@
-
-
 import { GoogleGenAI, Type, GenerateContentResponse, GenerateImagesResponse } from "@google/genai";
-import { QuizQuestion, Flashcard } from '../types';
+import { QuizQuestion, Flashcard, StudyPlanParams } from '../types';
 
 const shortenUrl = (url: string, maxLength: number = 40): string => {
     if (url.length <= maxLength) {
@@ -74,53 +72,100 @@ When a user asks a question, follow these rules:
 5.  **Tone**: Be encouraging, clear, and concise. Assume the user is learning.
 `;
 
-export const solveMathProblem = async (prompt: string): Promise<string> => {
-  try {
-    const response = await callApiWithRetries<GenerateContentResponse>(ai => ai.models.generateContent({
-      model: 'gemini-2.5-flash',
-      contents: prompt,
-      config: {
-        systemInstruction: AI_TUTOR_INSTRUCTION,
-        tools: [{ googleSearch: {} }],
-      },
-    }));
-
-    let responseText = response.text;
-    
-    const groundingChunks = response.candidates?.[0]?.groundingMetadata?.groundingChunks;
-    if (groundingChunks && Array.isArray(groundingChunks) && groundingChunks.length > 0) {
-        const sources = groundingChunks
-            .map((chunk: any) => chunk.web).filter((web: any) => web && web.uri)
-            .filter((web: any, index: number, self: any[]) => index === self.findIndex((w: any) => w.uri === web.uri))
-            .map((web: any) => `* [${web.title || shortenUrl(web.uri)}](${web.uri})`);
-        
-        if (sources.length > 0) {
-            responseText += "\n\n### Sources\n" + sources.join("\n");
+export async function* solveMathProblemStream(prompt: string): AsyncGenerator<string> {
+    try {
+        const responseStream = await callApiWithRetries<any>(ai => ai.models.generateContentStream({
+            model: 'gemini-2.5-flash',
+            contents: prompt,
+            config: { systemInstruction: AI_TUTOR_INSTRUCTION, tools: [{ googleSearch: {} }] },
+        }));
+        for await (const chunk of responseStream) {
+            if (chunk && chunk.text) yield chunk.text;
         }
+    } catch (error) {
+        yield handleApiError(error, 'solveMathProblemStream');
     }
+}
 
-    return responseText;
-  } catch (error) {
-    return handleApiError(error, 'solveMathProblem');
-  }
-};
-
-export const askQuestionAboutImage = async (base64Image: string, mimeType: string, question: string): Promise<string> => {
+export async function* askQuestionAboutImageStream(base64Image: string, mimeType: string, question: string): AsyncGenerator<string> {
     try {
         const imagePart = { inlineData: { data: base64Image, mimeType } };
         const textPart = { text: question };
-
-        const response: GenerateContentResponse = await callApiWithRetries(ai => ai.models.generateContent({
+        const responseStream = await callApiWithRetries<any>(ai => ai.models.generateContentStream({
             model: 'gemini-2.5-flash',
             contents: { parts: [imagePart, textPart] },
             config: { systemInstruction: AI_TUTOR_INSTRUCTION }
         }));
-
-        return response.text;
+        for await (const chunk of responseStream) {
+            if (chunk && chunk.text) yield chunk.text;
+        }
     } catch (error) {
-        return handleApiError(error, 'askQuestionAboutImage');
+        yield handleApiError(error, 'askQuestionAboutImageStream');
     }
-};
+}
+
+export async function* summarizeYouTubeURLStream(url: string): AsyncGenerator<string> {
+    try {
+        const prompt = `Please provide a concise summary of the YouTube video found at this URL: ${url}. The summary should be well-structured using Markdown for clarity (headings, bold text, bullet points). Base your summary on information available on the web.`;
+        const responseStream = await callApiWithRetries<any>(ai => ai.models.generateContentStream({
+            model: "gemini-2.5-flash", contents: prompt, config: { tools: [{ googleSearch: {} }] },
+        }));
+        for await (const chunk of responseStream) {
+            if (chunk && chunk.text) yield chunk.text;
+        }
+    } catch (error) {
+        yield handleApiError(error, 'summarizeYouTubeURLStream');
+    }
+}
+
+const AI_TUTOR_CHAT_INSTRUCTION = 'You are LearnSphere AI, a friendly and encouraging AI Tutor. Your goal is to have a natural, helpful conversation with the user. Help them with their questions, but keep your tone conversational and supportive. Use Markdown for readability.';
+type ApiChatMessage = { role: 'user' | 'model'; parts: { text: string }[] };
+
+export async function* getAiTutorResponseStream(prompt: string, history: ApiChatMessage[]): AsyncGenerator<string> {
+    try {
+        const responseStream = await callApiWithRetries<any>(ai => ai.models.generateContentStream({
+            model: 'gemini-2.5-flash',
+            contents: [...history, { role: 'user', parts: [{ text: prompt }] }],
+            config: { systemInstruction: AI_TUTOR_CHAT_INSTRUCTION },
+        }));
+        for await (const chunk of responseStream) {
+            if (chunk && chunk.text) yield chunk.text;
+        }
+    } catch (error) {
+        yield handleApiError(error, 'aiTutorChatStream');
+    }
+}
+
+export async function* gradeEssayStream(essay: string): AsyncGenerator<string> {
+    try {
+        const prompt = `Act as an expert writing instructor. Analyze the following essay and provide constructive feedback. Structure your feedback in Markdown with these sections:
+### Overall Impression
+A brief, encouraging summary.
+### Strengths
+- Point 1
+- Point 2
+### Areas for Improvement
+- Point 1 (with suggestions)
+- Point 2 (with suggestions)
+### Suggested Grade
+Provide a letter grade (e.g., A-, B+) with a short justification.
+
+Essay:\n${essay}`;
+        const responseStream = await callApiWithRetries<any>(ai => ai.models.generateContentStream({
+            model: 'gemini-2.5-flash', contents: prompt
+        }));
+        for await (const chunk of responseStream) {
+            if (chunk && chunk.text) yield chunk.text;
+        }
+    } catch (error) {
+        yield handleApiError(error, 'gradeEssayStream');
+    }
+}
+
+
+// --- Non-Streaming Functions ---
+// These are kept for features that require a complete, structured response (like JSON)
+// or are too short to benefit from streaming.
 
 export const generateQuizQuestion = async (subject: string, difficulty: string): Promise<QuizQuestion | null> => {
   try {
@@ -187,25 +232,6 @@ export const generateFlashcardsFromNote = async (noteContent: string): Promise<F
   } catch (error) { console.error("Error generating flashcards from note:", error); return null; }
 };
 
-export const summarizeYouTubeURL = async (url: string): Promise<string | null> => {
-  try {
-    const prompt = `Please provide a concise summary of the YouTube video found at this URL: ${url}. The summary should be well-structured using Markdown for clarity (headings, bold text, bullet points). Base your summary on information available on the web.`;
-    const response = await callApiWithRetries<GenerateContentResponse>(ai => ai.models.generateContent({
-      model: "gemini-2.5-flash", contents: prompt, config: { tools: [{ googleSearch: {} }] },
-    }));
-    let summaryText = response.text;
-    const groundingChunks = response.candidates?.[0]?.groundingMetadata?.groundingChunks;
-    if (groundingChunks && Array.isArray(groundingChunks) && groundingChunks.length > 0) {
-        const sources = groundingChunks
-            .map((chunk: any) => chunk.web).filter((web: any) => web && web.uri)
-            .filter((web: any, index: number, self: any[]) => index === self.findIndex((w: any) => w.uri === web.uri))
-            .map((web: any) => `* [${web.title || shortenUrl(web.uri)}](${web.uri})`);
-        if (sources.length > 0) summaryText += "\n\n### Sources\n" + sources.join("\n");
-    }
-    return summaryText;
-  } catch (error) { console.error("Error summarizing YouTube URL:", error); return null; }
-};
-
 export const submitSuggestion = async (category: string, message: string): Promise<string> => {
   try {
     const prompt = `A user has submitted feedback for the app. Category: ${category}, Message: "${message}". Generate a warm, appreciative response confirming receipt. Act as a friendly product manager. Keep it concise (2-3 sentences).`;
@@ -251,49 +277,6 @@ Note: ${noteContent}`;
         throw new Error("Failed to generate explanation. " + handleApiError(error, 'generateExplanation'));
     }
 };
-
-const AI_TUTOR_CHAT_INSTRUCTION = 'You are LearnSphere AI, a friendly and encouraging AI Tutor. Your goal is to have a natural, helpful conversation with the user. Help them with their questions, but keep your tone conversational and supportive. Use Markdown for readability.';
-type ApiChatMessage = { role: 'user' | 'model'; parts: { text: string }[] };
-export const getAiTutorResponse = async (prompt: string, history: ApiChatMessage[]): Promise<string> => {
-    try {
-        const response = await callApiWithRetries<GenerateContentResponse>(ai => ai.models.generateContent({
-            model: 'gemini-2.5-flash',
-            contents: [...history, { role: 'user', parts: [{ text: prompt }] }],
-            config: { systemInstruction: AI_TUTOR_CHAT_INSTRUCTION },
-        }));
-        return response.text;
-    } catch (error) { return handleApiError(error, 'aiTutorChat'); }
-};
-
-export const gradeEssay = async (essay: string): Promise<string> => {
-    try {
-        const prompt = `Act as an expert writing instructor. Analyze the following essay and provide constructive feedback. Structure your feedback in Markdown with these sections:
-### Overall Impression
-A brief, encouraging summary.
-### Strengths
-- Point 1
-- Point 2
-### Areas for Improvement
-- Point 1 (with suggestions)
-- Point 2 (with suggestions)
-### Suggested Grade
-Provide a letter grade (e.g., A-, B+) with a short justification.
-
-Essay:\n${essay}`;
-        const response = await callApiWithRetries<GenerateContentResponse>(ai => ai.models.generateContent({
-            model: 'gemini-2.5-flash', contents: prompt
-        }));
-        return response.text;
-    } catch (error) { return handleApiError(error, 'gradeEssay'); }
-};
-
-interface StudyPlanParams {
-    goal: string;
-    subject: string;
-    level: string;
-    country: string;
-    duration: number;
-}
 
 export const generateStudyPlan = async (params: StudyPlanParams): Promise<any | null> => {
     const { goal, subject, level, country, duration } = params;

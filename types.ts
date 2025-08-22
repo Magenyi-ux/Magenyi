@@ -51,6 +51,14 @@ export interface User {
   passwordHash?: string;
 }
 
+export interface StudyPlanParams {
+  goal: string;
+  subject: string;
+  level: string;
+  country: string;
+  duration: number;
+}
+
 // New types for activity logging
 export type ActivityType =
   | 'SOLVED_PROBLEM_TEXT'

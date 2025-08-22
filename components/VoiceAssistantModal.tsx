@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import * as THREE from 'three';
-import { solveMathProblem } from '../services/geminiService';
+import { solveMathProblemStream } from '../services/geminiService';
 import { useSpeech } from '../hooks/useSpeech';
 import { useNotification } from '../hooks/useNotification';
 
@@ -385,13 +385,25 @@ const VoiceAssistantModal: React.FC<VoiceAssistantModalProps> = ({ isOpen, onClo
         };
 
         recognition.onresult = async (event: any) => {
-          const spokenText = event.results[0][0].transcript;
-          recognition.stop();
-          setTranscript(spokenText);
-          setStatus('processing');
-          const response = await solveMathProblem(spokenText);
-          setAiResponse(response);
-          performSpeak(response);
+            const spokenText = event.results[0][0].transcript;
+            recognition.stop();
+            setTranscript(spokenText);
+            setStatus('processing');
+            setAiResponse('');
+
+            try {
+                let fullResponse = '';
+                const stream = solveMathProblemStream(spokenText);
+                for await (const chunk of stream) {
+                    fullResponse += chunk;
+                    setAiResponse(fullResponse);
+                }
+                performSpeak(fullResponse);
+            } catch (error) {
+                const errorMsg = "Sorry, I couldn't process that.";
+                setAiResponse(errorMsg);
+                performSpeak(errorMsg);
+            }
         };
 
         recognition.onerror = (event: any) => {
@@ -440,10 +452,16 @@ const VoiceAssistantModal: React.FC<VoiceAssistantModalProps> = ({ isOpen, onClo
     <div className="fixed inset-0 bg-slate-900 bg-opacity-95 backdrop-blur-sm z-50 flex flex-col items-center justify-between p-8 text-white transition-opacity duration-300"
          aria-modal="true" role="dialog">
       
-      <div className="flex flex-col items-center justify-center text-center flex-1">
+      <div className="flex flex-col items-center justify-center text-center flex-1 w-full">
         <RealtimeVisualizer status={status} />
         <h2 className="text-3xl font-bold mt-8">AI Tutor</h2>
         <p className="text-slate-300 mt-2 text-lg h-14">{getStatusText()}</p>
+        {(aiResponse || (status === 'processing' && transcript)) &&
+            <div className="mt-4 p-4 bg-black/20 rounded-lg max-w-xl w-full max-h-48 overflow-y-auto text-left prose prose-invert prose-sm">
+                {aiResponse}
+                {status === 'processing' && <span className="inline-block w-2 h-4 bg-slate-300 animate-pulse ml-1 align-bottom"></span>}
+            </div>
+        }
       </div>
 
       <div className="flex flex-col items-center w-full">
