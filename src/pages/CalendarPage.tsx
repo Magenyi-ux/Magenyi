@@ -1,4 +1,5 @@
 
+
 import React, { useState, useEffect } from 'react';
 import { generateStudyPlan } from '../services/geminiService';
 import { useActivityLogger } from '../hooks/useActivityLogger';
@@ -81,35 +82,35 @@ const CalendarPage: React.FC = () => {
     return (
         <div className="max-w-5xl mx-auto">
             <h2 className="text-3xl font-bold mb-2 text-center">AI Study Calendar</h2>
-            <p className="text-center text-slate-600 dark:text-slate-400 mb-8">
+            <p className="text-center text-slate-600 mb-8">
                 Tell the AI your goals, and it will generate a personalized, trackable study schedule.
             </p>
 
-            <div className="bg-white dark:bg-slate-800 p-6 rounded-lg shadow-lg mb-8">
+            <div className="bg-white p-6 rounded-lg shadow-lg mb-8">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                     <div>
                         <label htmlFor="study-goal" className="block text-sm font-semibold mb-1">Main Goal</label>
-                        <input id="study-goal" value={goal} onChange={(e) => setGoal(e.target.value)} placeholder="e.g., Ace my final exam" className="w-full p-2 border-2 border-slate-300 dark:border-slate-600 rounded-lg bg-slate-50 dark:bg-slate-700 focus:ring-2 focus:ring-indigo-500" />
+                        <input id="study-goal" value={goal} onChange={(e) => setGoal(e.target.value)} placeholder="e.g., Ace my final exam" className="w-full p-2 border-2 border-slate-300 rounded-lg bg-slate-50 focus:ring-2 focus:ring-indigo-500" />
                     </div>
                     <div>
                         <label htmlFor="study-subject" className="block text-sm font-semibold mb-1">Focus Subject/Topic</label>
-                        <input id="study-subject" value={subject} onChange={(e) => setSubject(e.target.value)} placeholder="e.g., Calculus II" className="w-full p-2 border-2 border-slate-300 dark:border-slate-600 rounded-lg bg-slate-50 dark:bg-slate-700 focus:ring-2 focus:ring-indigo-500" />
+                        <input id="study-subject" value={subject} onChange={(e) => setSubject(e.target.value)} placeholder="e.g., Calculus II" className="w-full p-2 border-2 border-slate-300 rounded-lg bg-slate-50 focus:ring-2 focus:ring-indigo-500" />
                     </div>
                     <div>
                         <label htmlFor="education-level" className="block text-sm font-semibold mb-1">Education Level</label>
-                        <select id="education-level" value={level} onChange={(e) => setLevel(e.target.value)} className="w-full p-2 border-2 border-slate-300 dark:border-slate-600 rounded-lg bg-slate-50 dark:bg-slate-700 focus:ring-2 focus:ring-indigo-500">
+                        <select id="education-level" value={level} onChange={(e) => setLevel(e.target.value)} className="w-full p-2 border-2 border-slate-300 rounded-lg bg-slate-50 focus:ring-2 focus:ring-indigo-500">
                             {educationLevels.map(l => <option key={l} value={l}>{l}</option>)}
                         </select>
                     </div>
                     <div>
                         <label htmlFor="country" className="block text-sm font-semibold mb-1">Country</label>
-                        <select id="country" value={country} onChange={(e) => setCountry(e.target.value)} className="w-full p-2 border-2 border-slate-300 dark:border-slate-600 rounded-lg bg-slate-50 dark:bg-slate-700 focus:ring-2 focus:ring-indigo-500">
+                        <select id="country" value={country} onChange={(e) => setCountry(e.target.value)} className="w-full p-2 border-2 border-slate-300 rounded-lg bg-slate-50 focus:ring-2 focus:ring-indigo-500">
                             {countries.map(c => <option key={c} value={c}>{c}</option>)}
                         </select>
                     </div>
                     <div className="md:col-span-2">
                         <label htmlFor="duration" className="block text-sm font-semibold mb-1">Plan Duration (Days)</label>
-                        <select id="duration" value={duration} onChange={(e) => setDuration(e.target.value)} className="w-full p-2 border-2 border-slate-300 dark:border-slate-600 rounded-lg bg-slate-50 dark:bg-slate-700 focus:ring-2 focus:ring-indigo-500">
+                        <select id="duration" value={duration} onChange={(e) => setDuration(e.target.value)} className="w-full p-2 border-2 border-slate-300 rounded-lg bg-slate-50 focus:ring-2 focus:ring-indigo-500">
                            <option value="3">3 Days</option>
                            <option value="7">7 Days</option>
                            <option value="14">14 Days</option>
@@ -140,7 +141,7 @@ const CalendarPage: React.FC = () => {
                                 <h3 className="text-xl font-bold">Your Plan Progress</h3>
                                 <span className="font-semibold">{progress}% Complete</span>
                             </div>
-                            <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-2.5">
+                            <div className="w-full bg-slate-200 rounded-full h-2.5">
                                 <div 
                                     className="bg-green-500 h-2.5 rounded-full transition-all duration-500" 
                                     style={{ width: `${progress}%` }}
@@ -148,19 +149,19 @@ const CalendarPage: React.FC = () => {
                             </div>
                         </div>
 
-                        <div className="bg-white dark:bg-slate-800 p-6 rounded-lg shadow-lg mb-8">
-                            <h3 className="text-2xl font-bold text-indigo-600 dark:text-indigo-400">{selectedDay.day}</h3>
-                            <p className="font-semibold text-slate-600 dark:text-slate-300 mb-4">{selectedDay.focus}</p>
-                            <div className="space-y-3 text-slate-700 dark:text-slate-300">
+                        <div className="bg-white p-6 rounded-lg shadow-lg mb-8">
+                            <h3 className="text-2xl font-bold text-black">{selectedDay.day}</h3>
+                            <p className="font-semibold text-slate-600 mb-4">{selectedDay.focus}</p>
+                            <div className="space-y-3 text-slate-700">
                                 {selectedDay.tasks.map((task, taskIndex) => (
-                                    <label key={taskIndex} className="flex items-start space-x-3 cursor-pointer p-2 rounded-md hover:bg-slate-100 dark:hover:bg-slate-700/50">
+                                    <label key={taskIndex} className="flex items-start space-x-3 cursor-pointer p-2 rounded-md hover:bg-slate-100">
                                         <input 
                                             type="checkbox" 
                                             checked={task.completed} 
                                             onChange={() => handleToggleTask(selectedDayIndex, taskIndex)}
                                             className="h-5 w-5 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 mt-1 flex-shrink-0"
                                         />
-                                        <span className={`flex-1 ${task.completed ? 'line-through text-slate-400 dark:text-slate-500' : ''}`}>
+                                        <span className={`flex-1 ${task.completed ? 'line-through text-slate-400' : ''}`}>
                                             {task.text}
                                         </span>
                                     </label>
@@ -177,14 +178,14 @@ const CalendarPage: React.FC = () => {
                                         onClick={() => setSelectedDayIndex(index)}
                                         className={`cursor-pointer p-4 rounded-lg shadow-md flex-shrink-0 w-64 transition-all duration-200
                                             ${index === selectedDayIndex
-                                                ? 'bg-indigo-100 dark:bg-indigo-900 border-2 border-indigo-500'
-                                                : 'bg-white dark:bg-slate-800 hover:scale-105'
+                                                ? 'bg-indigo-100 border-2 border-indigo-500'
+                                                : 'bg-white hover:scale-105'
                                             }`
                                         }
                                     >
-                                        <h4 className="font-bold text-slate-800 dark:text-slate-100">{day.day}</h4>
-                                        <p className="text-sm text-slate-500 dark:text-slate-400 truncate">{day.focus}</p>
-                                        <div className="text-xs text-slate-400 dark:text-slate-500 mt-2">
+                                        <h4 className="font-bold text-slate-800">{day.day}</h4>
+                                        <p className="text-sm text-slate-500 truncate">{day.focus}</p>
+                                        <div className="text-xs text-slate-400 mt-2">
                                             {day.tasks.filter(t => t.completed).length} / {day.tasks.length} tasks done
                                         </div>
                                     </div>

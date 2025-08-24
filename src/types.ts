@@ -1,4 +1,6 @@
 
+import React from 'react';
+
 export type Theme = 'light' | 'dark';
 
 export type Page = 'Home' | 'Solver' | 'AI Tutor' | 'Practice' | 'Notes' | 'Settings' | 'YouTube Summarizer' | 'Suggestions' | 'Profile' | 'Quiz' | 'Essay Grader' | 'Calendar';

@@ -1,4 +1,5 @@
 
+
 import React, { useState, useEffect } from 'react';
 import { useLocalStorage } from '../hooks/useLocalStorage';
 import { QuizQuestion, UserStats, Page } from '../types';
@@ -82,14 +83,14 @@ const QuizPlayerPage: React.FC<QuizPlayerPageProps> = ({ navigate }) => {
 
   const getButtonClass = (option: string) => {
     if (!isAnswered) {
-      return 'bg-white dark:bg-slate-700 hover:bg-indigo-100 dark:hover:bg-indigo-900';
+      return 'bg-white hover:bg-indigo-100';
     }
     const isCorrect = option === quiz![currentIndex].correctAnswer;
     const isSelected = option === selectedAnswer;
 
     if (isCorrect) return 'bg-green-500 text-white border-green-500';
     if (isSelected && !isCorrect) return 'bg-red-500 text-white border-red-500';
-    return 'bg-slate-100 dark:bg-slate-700 opacity-60 border-transparent';
+    return 'bg-slate-100 opacity-60 border-transparent';
   };
   
   if (isLoading) {
@@ -108,10 +109,10 @@ const QuizPlayerPage: React.FC<QuizPlayerPageProps> = ({ navigate }) => {
   
   if (showSummary) {
       return (
-        <div className="max-w-lg mx-auto text-center p-8 bg-white dark:bg-slate-800 rounded-lg shadow-xl animate-fade-in">
+        <div className="max-w-lg mx-auto text-center p-8 bg-white rounded-lg shadow-xl animate-fade-in">
             <h2 className="text-4xl font-bold mb-4">Quiz Complete!</h2>
             <p className="text-2xl mb-2">You scored:</p>
-            <p className="text-6xl font-extrabold text-indigo-600 dark:text-indigo-400 mb-8">{score} / {quiz!.length}</p>
+            <p className="text-6xl font-extrabold text-black mb-8">{score} / {quiz!.length}</p>
             <button onClick={() => navigate('Notes')} className="bg-indigo-600 text-white font-bold py-3 px-8 rounded-lg hover:bg-indigo-700 transition-transform hover:scale-105">Finish</button>
         </div>
       );
@@ -123,10 +124,10 @@ const QuizPlayerPage: React.FC<QuizPlayerPageProps> = ({ navigate }) => {
 
   return (
     <div className="max-w-3xl mx-auto">
-      <div className="bg-white dark:bg-slate-800 p-6 rounded-lg shadow-lg">
+      <div className="bg-white p-6 rounded-lg shadow-lg">
         <div className="mb-6">
-          <p className="text-sm font-semibold text-indigo-600 dark:text-indigo-400">Question {currentIndex + 1} of {quiz.length}</p>
-          <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-2.5 mt-2">
+          <p className="text-sm font-semibold text-black">Question {currentIndex + 1} of {quiz.length}</p>
+          <div className="w-full bg-slate-200 rounded-full h-2.5 mt-2">
             <div className="bg-indigo-600 h-2.5 rounded-full" style={{ width: `${((currentIndex + 1) / quiz.length) * 100}%` }}></div>
           </div>
         </div>

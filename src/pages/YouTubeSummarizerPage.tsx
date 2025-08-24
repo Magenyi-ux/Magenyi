@@ -1,4 +1,5 @@
 
+
 import React, { useState } from 'react';
 import { useLocalStorage } from '../hooks/useLocalStorage';
 import { Note } from '../types';
@@ -7,7 +8,7 @@ import { useActivityLogger } from '../hooks/useActivityLogger';
 import { useNotification } from '../hooks/useNotification';
 
 const LoadingSpinner = () => <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>;
-const BlinkingCursor: React.FC = () => <span className="inline-block w-2 h-4 bg-slate-700 dark:bg-slate-300 animate-pulse ml-1 align-bottom"></span>;
+const BlinkingCursor: React.FC = () => <span className="inline-block w-2 h-4 bg-slate-700 animate-pulse ml-1 align-bottom"></span>;
 
 
 const YouTubeSummarizerPage: React.FC = () => {
@@ -67,7 +68,7 @@ const YouTubeSummarizerPage: React.FC = () => {
     const renderMarkdown = (text: string) => {
       const lines = text.split('\n');
       const elements = [];
-      let listItems: JSX.Element[] = [];
+      let listItems: React.ReactNode[] = [];
     
       const flushList = () => {
         if (listItems.length > 0) {
@@ -115,7 +116,7 @@ const YouTubeSummarizerPage: React.FC = () => {
         <div className="max-w-4xl mx-auto">
             <h2 className="text-3xl font-bold mb-6 text-center">YouTube Video Summarizer</h2>
 
-            <div className="bg-white dark:bg-slate-800 p-6 rounded-lg shadow-md mb-8 space-y-4">
+            <div className="bg-white p-6 rounded-lg shadow-md mb-8 space-y-4">
                 <div>
                     <label htmlFor="youtube-url" className="block text-lg font-semibold mb-2">YouTube Video URL</label>
                     <input
@@ -124,10 +125,10 @@ const YouTubeSummarizerPage: React.FC = () => {
                         value={url}
                         onChange={(e) => setUrl(e.target.value)}
                         placeholder="https://www.youtube.com/watch?v=..."
-                        className="w-full p-3 border-2 border-slate-300 dark:border-slate-600 rounded-lg bg-slate-50 dark:bg-slate-700 focus:ring-2 focus:ring-indigo-500"
+                        className="w-full p-3 border-2 border-slate-300 rounded-lg bg-slate-50 focus:ring-2 focus:ring-indigo-500"
                     />
                 </div>
-                 <div className="p-3 bg-yellow-50 dark:bg-yellow-900/50 rounded-md text-sm text-yellow-800 dark:text-yellow-200 animate-fade-in">
+                 <div className="p-3 bg-yellow-50 rounded-md text-sm text-yellow-800 animate-fade-in">
                     <strong>Note:</strong> Summaries are generated using Google Search and may not reflect the full video content. This works best for popular or well-documented videos.
                 </div>
                 <button
@@ -143,10 +144,10 @@ const YouTubeSummarizerPage: React.FC = () => {
             {error && <p className="text-red-500 text-center mb-4">{error}</p>}
             
             {(isLoading || summary) && (
-                 <div className="bg-white dark:bg-slate-800 p-6 rounded-lg shadow-md mb-8 animate-fade-in">
-                    <h3 className="text-2xl font-bold mb-4 border-b border-slate-200 dark:border-slate-700 pb-2">Summary</h3>
+                 <div className="bg-white p-6 rounded-lg shadow-md mb-8 animate-fade-in">
+                    <h3 className="text-2xl font-bold mb-4 border-b border-slate-200 pb-2">Summary</h3>
                     
-                    <div className="prose prose-slate dark:prose-invert max-w-none mb-6">
+                    <div className="prose prose-slate max-w-none mb-6">
                         {summary ? (
                             <>
                                 {renderMarkdown(summary)}
@@ -154,15 +155,15 @@ const YouTubeSummarizerPage: React.FC = () => {
                             </>
                         ) : (
                            <div className="space-y-3">
-                                <div className="w-full h-4 bg-slate-200 dark:bg-slate-700 rounded animate-pulse"></div>
-                                <div className="w-full h-4 bg-slate-200 dark:bg-slate-700 rounded animate-pulse"></div>
-                                <div className="w-5/6 h-4 bg-slate-200 dark:bg-slate-700 rounded animate-pulse"></div>
+                                <div className="w-full h-4 bg-slate-200 rounded animate-pulse"></div>
+                                <div className="w-full h-4 bg-slate-200 rounded animate-pulse"></div>
+                                <div className="w-5/6 h-4 bg-slate-200 rounded animate-pulse"></div>
                            </div>
                         )}
                     </div>
 
                     {!isLoading && summary && (
-                        <div className="text-center mt-6 border-t border-slate-200 dark:border-slate-700 pt-4">
+                        <div className="text-center mt-6 border-t border-slate-200 pt-4">
                             <button
                                 onClick={handleSaveNote}
                                 className="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-5 rounded-lg transition"

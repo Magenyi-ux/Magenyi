@@ -1,4 +1,5 @@
 
+
 import React from 'react';
 import { Page } from '../types';
 import MiniProgressTracker from './MiniProgressTracker';
@@ -18,9 +19,9 @@ const MenuIcon = () => (
 
 const Header: React.FC<HeaderProps> = ({ onMenuClick, currentPage }) => {
   return (
-    <header className="flex-shrink-0 bg-white dark:bg-slate-800 shadow-md h-16 flex items-center justify-between px-4 z-10">
+    <header className="flex-shrink-0 bg-white shadow-md h-16 flex items-center justify-between px-4 z-10">
       <div className="flex items-center">
-        <button onClick={onMenuClick} className="p-2 rounded-full hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors">
+        <button onClick={onMenuClick} className="p-2 rounded-full hover:bg-slate-200 transition-colors">
             <MenuIcon/>
         </button>
         <h1 className="text-xl font-bold ml-4">{currentPage}</h1>

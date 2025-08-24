@@ -1,4 +1,5 @@
 
+
 import React from 'react';
 import { useLocalStorage } from '../hooks/useLocalStorage';
 import { UserStats } from '../types';
@@ -19,9 +20,9 @@ const ProgressTracker: React.FC = () => {
                 <div>
                     <div className="flex justify-between items-center mb-1 font-semibold">
                         <span>Level {level}</span>
-                        <span className="text-sm text-slate-500 dark:text-slate-400">{stats.xp} XP</span>
+                        <span className="text-sm text-slate-500">{stats.xp} XP</span>
                     </div>
-                    <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-3">
+                    <div className="w-full bg-slate-200 rounded-full h-3">
                         <div 
                             className="bg-indigo-600 h-3 rounded-full transition-all duration-500" 
                             style={{ width: `${progressPercent}%` }}
@@ -31,11 +32,11 @@ const ProgressTracker: React.FC = () => {
                 <div className="grid grid-cols-2 gap-4 text-center pt-2">
                     <div>
                         <p className="text-2xl font-bold">{stats.score}</p>
-                        <p className="text-sm text-slate-500 dark:text-slate-400">Total Score</p>
+                        <p className="text-sm text-slate-500">Total Score</p>
                     </div>
                     <div>
                         <p className="text-2xl font-bold">{stats.streak} 🔥</p>
-                        <p className="text-sm text-slate-500 dark:text-slate-400">Current Streak</p>
+                        <p className="text-sm text-slate-500">Current Streak</p>
                     </div>
                 </div>
             </div>

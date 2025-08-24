@@ -1,4 +1,5 @@
 
+
 import React, { useState, useEffect } from 'react';
 import { Page, Note, Activity, ActivityType } from '../types';
 import ProgressTracker from '../components/ProgressTracker';
@@ -44,7 +45,7 @@ const activityDisplayMap: Record<ActivityType, { icon: string; text: string }> =
 };
 
 const Card: React.FC<{ children: React.ReactNode; className?: string }> = ({ children, className = '' }) => (
-    <div className={`bg-white dark:bg-slate-800 p-6 rounded-xl shadow-lg flex flex-col ${className}`}>
+    <div className={`bg-white p-6 rounded-xl shadow-lg flex flex-col ${className}`}>
         {children}
     </div>
 );
@@ -106,7 +107,7 @@ const DailyChallenge: React.FC = () => {
 
     const getButtonClass = (option: string) => {
         if (!isAnswered) {
-            return 'bg-slate-100 dark:bg-slate-700 hover:bg-indigo-100 dark:hover:bg-indigo-900';
+            return 'bg-slate-100 hover:bg-indigo-100';
         }
         if (option === challenge?.correctAnswer) {
             return 'bg-green-500 text-white';
@@ -114,7 +115,7 @@ const DailyChallenge: React.FC = () => {
         if (option === selectedOption && option !== challenge?.correctAnswer) {
             return 'bg-red-500 text-white';
         }
-        return 'bg-slate-100 dark:bg-slate-700 opacity-60';
+        return 'bg-slate-100 opacity-60';
     };
 
     return (
@@ -122,18 +123,18 @@ const DailyChallenge: React.FC = () => {
             <CardTitle icon="🧠">Daily Challenge</CardTitle>
             {isLoading ? (
                 <div className="space-y-3">
-                    <div className="w-full h-4 bg-slate-200 dark:bg-slate-700 rounded animate-pulse"></div>
-                    <div className="w-5/6 h-4 bg-slate-200 dark:bg-slate-700 rounded animate-pulse mb-4"></div>
+                    <div className="w-full h-4 bg-slate-200 rounded animate-pulse"></div>
+                    <div className="w-5/6 h-4 bg-slate-200 rounded animate-pulse mb-4"></div>
                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        <div className="w-full h-10 bg-slate-200 dark:bg-slate-700 rounded-lg animate-pulse"></div>
-                        <div className="w-full h-10 bg-slate-200 dark:bg-slate-700 rounded-lg animate-pulse"></div>
-                        <div className="w-full h-10 bg-slate-200 dark:bg-slate-700 rounded-lg animate-pulse"></div>
-                        <div className="w-full h-10 bg-slate-200 dark:bg-slate-700 rounded-lg animate-pulse"></div>
+                        <div className="w-full h-10 bg-slate-200 rounded-lg animate-pulse"></div>
+                        <div className="w-full h-10 bg-slate-200 rounded-lg animate-pulse"></div>
+                        <div className="w-full h-10 bg-slate-200 rounded-lg animate-pulse"></div>
+                        <div className="w-full h-10 bg-slate-200 rounded-lg animate-pulse"></div>
                     </div>
                 </div>
             ) : challenge ? (
                 <div className="flex-1 flex flex-col justify-between">
-                    <p className="text-slate-700 dark:text-slate-300 mb-4">{challenge.question}</p>
+                    <p className="text-slate-700 mb-4">{challenge.question}</p>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         {challenge.options.map((option, index) => (
                             <button
@@ -165,11 +166,11 @@ const ContinueLearning: React.FC<{ navigate: (page: Page) => void }> = ({ naviga
                 <div className="flex-1 flex flex-col justify-between">
                     <div>
                         <h4 className="font-bold">{lastNote.title}</h4>
-                        <p className="text-sm text-slate-500 dark:text-slate-400 mt-1 line-clamp-3">{lastNote.content.replace(/!\[.*?\]\(.*?\)/g, '')}</p>
+                        <p className="text-sm text-slate-500 mt-1 line-clamp-3">{lastNote.content.replace(/!\[.*?\]\(.*?\)/g, '')}</p>
                     </div>
                     <button 
                         onClick={() => navigate('Notes')}
-                        className="mt-4 text-sm font-semibold text-indigo-600 dark:text-indigo-400 hover:underline self-start"
+                        className="mt-4 text-sm font-semibold text-indigo-600 hover:underline self-start"
                     >
                         Jump Back In →
                     </button>
@@ -185,19 +186,19 @@ const QuickActions: React.FC<{ navigate: (page: Page) => void }> = ({ navigate }
     <Card>
         <CardTitle icon="⚡">Quick Actions</CardTitle>
         <div className="grid grid-cols-2 gap-4">
-            <button onClick={() => navigate('Solver')} className="p-3 bg-slate-100 dark:bg-slate-700 rounded-lg text-center hover:bg-slate-200 dark:hover:bg-slate-600 transition">
+            <button onClick={() => navigate('Solver')} className="p-3 bg-slate-100 rounded-lg text-center hover:bg-slate-200 transition">
                 <span className="text-2xl">🧮</span>
                 <p className="font-semibold text-sm mt-1">Solver</p>
             </button>
-            <button onClick={() => navigate('Practice')} className="p-3 bg-slate-100 dark:bg-slate-700 rounded-lg text-center hover:bg-slate-200 dark:hover:bg-slate-600 transition">
+            <button onClick={() => navigate('Practice')} className="p-3 bg-slate-100 rounded-lg text-center hover:bg-slate-200 transition">
                 <span className="text-2xl">🎯</span>
                 <p className="font-semibold text-sm mt-1">Practice</p>
             </button>
-            <button onClick={() => navigate('AI Tutor')} className="p-3 bg-slate-100 dark:bg-slate-700 rounded-lg text-center hover:bg-slate-200 dark:hover:bg-slate-600 transition">
+            <button onClick={() => navigate('AI Tutor')} className="p-3 bg-slate-100 rounded-lg text-center hover:bg-slate-200 transition">
                 <span className="text-2xl">💬</span>
                 <p className="font-semibold text-sm mt-1">AI Tutor</p>
             </button>
-            <button onClick={() => navigate('Notes')} className="p-3 bg-slate-100 dark:bg-slate-700 rounded-lg text-center hover:bg-slate-200 dark:hover:bg-slate-600 transition">
+            <button onClick={() => navigate('Notes')} className="p-3 bg-slate-100 rounded-lg text-center hover:bg-slate-200 transition">
                 <span className="text-2xl">📝</span>
                 <p className="font-semibold text-sm mt-1">Notes</p>
             </button>
@@ -216,10 +217,10 @@ const RecentActivity: React.FC = () => {
                 <ul className="space-y-3">
                     {recentActivities.map(activity => (
                          <li key={activity.id} className="flex items-center gap-3 text-sm">
-                            <span className="text-xl bg-slate-100 dark:bg-slate-700 p-2 rounded-full">{activityDisplayMap[activity.type]?.icon || '✨'}</span>
+                            <span className="text-xl bg-slate-100 p-2 rounded-full">{activityDisplayMap[activity.type]?.icon || '✨'}</span>
                             <div className="flex-1">
-                                <p className="font-semibold text-slate-800 dark:text-slate-200">{activityDisplayMap[activity.type]?.text || activity.type}</p>
-                                <p className="text-xs text-slate-500 dark:text-slate-400">{timeAgo(activity.timestamp)}</p>
+                                <p className="font-semibold text-slate-800">{activityDisplayMap[activity.type]?.text || activity.type}</p>
+                                <p className="text-xs text-slate-500">{timeAgo(activity.timestamp)}</p>
                             </div>
                          </li>
                     ))}
@@ -238,9 +239,9 @@ const HomePage: React.FC<HomePageProps> = ({ navigate }) => {
     <div className="space-y-8 animate-fade-in">
         <header>
             <h1 className="text-4xl sm:text-5xl font-extrabold mb-2">
-                Welcome back, <span className="text-indigo-600 dark:text-indigo-400">{currentUser?.username || 'Learner'}</span>!
+                Welcome back, <span className="text-black">{currentUser?.username || 'Learner'}</span>!
             </h1>
-            <p className="text-lg text-slate-600 dark:text-slate-400">Let's make today a productive study session.</p>
+            <p className="text-lg text-slate-600">Let's make today a productive study session.</p>
         </header>
         
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">

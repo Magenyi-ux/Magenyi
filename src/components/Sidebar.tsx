@@ -1,4 +1,5 @@
 
+
 import React from 'react';
 import { NavItem, Page } from '../types';
 
@@ -20,12 +21,12 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, navItems, currentPag
         onClick={onClose}
       />
       <aside
-        className={`fixed top-0 left-0 h-full w-64 bg-white dark:bg-slate-800 shadow-xl z-30 transform transition-transform ${
+        className={`fixed top-0 left-0 h-full w-64 bg-white shadow-xl z-30 transform transition-transform ${
           isOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
-        <div className="p-4 border-b border-slate-200 dark:border-slate-700">
-          <h2 className="text-2xl font-bold text-indigo-600 dark:text-indigo-400">LearnSphere AI</h2>
+        <div className="p-4 border-b border-slate-200">
+          <h2 className="text-2xl font-bold text-black">LearnSphere AI</h2>
         </div>
         <nav className="mt-4">
           <ul>
@@ -35,8 +36,8 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, navItems, currentPag
                   onClick={() => navigate(item.name)}
                   className={`flex items-center w-full px-4 py-3 rounded-lg transition-colors ${
                     currentPage === item.name
-                      ? 'bg-indigo-100 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-300'
-                      : 'hover:bg-slate-100 dark:hover:bg-slate-700'
+                      ? 'bg-indigo-100 text-black'
+                      : 'hover:bg-slate-100'
                   }`}
                 >
                   {item.icon}

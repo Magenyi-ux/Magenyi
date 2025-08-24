@@ -1,4 +1,5 @@
 
+
 import React, { useState, useEffect, useRef } from 'react';
 import { useLocalStorage } from '../hooks/useLocalStorage';
 import { generateStudyFact } from '../services/geminiService';
@@ -55,7 +56,7 @@ const StudyFact: React.FC = () => {
     return (
         <div className="relative hidden md:flex items-center gap-2 p-2 rounded-lg max-w-xs group cursor-help" title={fact}>
             <span className="text-xl flex-shrink-0">💡</span>
-            <p className={`text-xs text-slate-700 dark:text-slate-300 transition-opacity duration-500 line-clamp-2 ${isFading ? 'opacity-0' : 'opacity-100'}`}>
+            <p className={`text-xs text-slate-700 transition-opacity duration-500 line-clamp-2 ${isFading ? 'opacity-0' : 'opacity-100'}`}>
                 {fact}
             </p>
         </div>

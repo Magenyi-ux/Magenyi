@@ -34,6 +34,7 @@ const NotesPage: React.FC<NotesPageProps> = ({ navigate }) => {
     const [audioRecapData, setAudioRecapData] = useState<{ script: string }>({ script: '' });
     const [videoData, setVideoData] = useState<{ url: string | null, progress: string }>({ url: null, progress: '' });
     const [flashcards, setFlashcards] = useState<Flashcard[]>([]);
+    const [areFlashcardsSaved, setAreFlashcardsSaved] = useState(false);
     const [isQuizReady, setIsQuizReady] = useState(false);
     const [manualTitle, setManualTitle] = useState('');
     const [manualContent, setManualContent] = useState('');
@@ -116,10 +117,31 @@ const NotesPage: React.FC<NotesPageProps> = ({ navigate }) => {
     };
 
     const beginQuiz = () => { setIsQuizReady(false); navigate('Quiz'); };
-    const generateAndShowFlashcards = async (note: Note) => { setIsLoading(true); setModalNote(note); const cards = await generateFlashcardsFromNote(note.content); if (cards) { setFlashcards(cards); logActivity('NOTE_FLASHCARDS_GENERATED', { noteId: note.id }); setModalOpen('flashcards'); } else showNotification("Failed to generate flashcards.", 'error'); setIsLoading(false); };
+    const generateAndShowFlashcards = async (note: Note) => { setIsLoading(true); setModalNote(note); setAreFlashcardsSaved(false); const cards = await generateFlashcardsFromNote(note.content); if (cards) { setFlashcards(cards); logActivity('NOTE_FLASHCARDS_GENERATED', { noteId: note.id }); setModalOpen('flashcards'); } else showNotification("Failed to generate flashcards.", 'error'); setIsLoading(false); };
     const handleExplain = async (note: Note) => { setIsLoading(true); setModalNote(note); try { const data = await generateExplanation(note.content); setExplanationData(data); logActivity('NOTE_EXPLAINED', { noteId: note.id }); setModalOpen('explanation'); } catch (e: any) { showNotification(e.message, 'error'); } setIsLoading(false); };
-    const handleAudioRecap = async (note: Note) => { setIsLoading(true); setModalNote(note); try { const script = await generateAudioRecapScript(note.content); setAudioRecapData({ script }); logActivity('AUDIO_RECAP_GENERATED', { noteId: note.id }); setModalOpen('audio'); } catch (e) { showNotification("Failed to generate audio recap.", 'error'); } setIsLoading(false); };
+    const handleAudioRecap = async (note: Note) => { setIsLoading(true); setModalNote(note); try { const script = await generateAudioRecapScript(note.content); setAudioRecapData({ script }); logActivity('AUDIO_RECAP_GENERATED', { noteId: note.id }); setModalOpen('audio'); } catch (e: any) { showNotification("Failed to generate audio recap.", 'error'); } setIsLoading(false); };
     const handleExplainerVideo = async (note: Note) => { setIsLoading(true); setModalNote(note); setModalOpen('video'); try { const url = await generateExplainerVideo(note.content, (progress) => setVideoData({ url: null, progress })); setVideoData({ url, progress: 'Video ready!' }); logActivity('VIDEO_GENERATED', { noteId: note.id }); } catch (e: any) { setVideoData({ url: null, progress: e.message }); } setIsLoading(false); };
+
+    const handleSaveFlashcards = () => {
+        if (!modalNote || flashcards.length === 0 || areFlashcardsSaved) return;
+
+        const content = flashcards.map(card => 
+`**Q: ${card.front}**
+A: ${card.back}`
+        ).join('\n\n---\n\n');
+
+        const newNote: Note = {
+            id: `flashcards_${modalNote.id}_${Date.now()}`,
+            title: `Flashcards: ${modalNote.title}`,
+            subject: modalNote.subject,
+            content: `### Flashcards generated from "${modalNote.title}"\n\n${content}`,
+            timestamp: Date.now(),
+        };
+
+        setNotes(prevNotes => [newNote, ...prevNotes]);
+        showNotification('Flashcards saved to Notes!', 'success');
+        setAreFlashcardsSaved(true);
+    };
 
     const closeModal = () => {
         window.speechSynthesis.cancel();
@@ -151,7 +173,7 @@ const NotesPage: React.FC<NotesPageProps> = ({ navigate }) => {
         }
     };
 
-    const renderNoteContent = (content: string) => <div className="prose prose-slate dark:prose-invert max-w-none" dangerouslySetInnerHTML={{ __html: content.replace(/\n/g, '<br />').replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') }} />;
+    const renderNoteContent = (content: string) => <div className="prose prose-slate max-w-none" dangerouslySetInnerHTML={{ __html: content.replace(/\n/g, '<br />').replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') }} />;
 
     return (
         <div className="max-w-4xl mx-auto">
@@ -164,13 +186,13 @@ const NotesPage: React.FC<NotesPageProps> = ({ navigate }) => {
                     {notes.length > 0 ? (
                         <div className="space-y-4">
                             {notes.map(note => (
-                                <div key={note.id} className="bg-white dark:bg-slate-800 p-4 rounded-lg shadow-md transition hover:shadow-lg">
+                                <div key={note.id} className="bg-white p-4 rounded-lg shadow-md transition hover:shadow-lg">
                                     <div className="cursor-pointer" onClick={() => setSelectedNote(selectedNote?.id === note.id ? null : note)}>
-                                        <h3 className="text-xl font-bold text-indigo-700 dark:text-indigo-400">{note.title}</h3>
+                                        <h3 className="text-xl font-bold text-black">{note.title}</h3>
                                         <p className="text-sm text-slate-500">{new Date(note.timestamp).toLocaleDateString()}</p>
                                     </div>
                                     {selectedNote?.id === note.id && (
-                                        <div className="mt-4 pt-4 border-t border-slate-200 dark:border-slate-700">
+                                        <div className="mt-4 pt-4 border-t border-slate-200">
                                             {renderNoteContent(note.content)}
                                             <div className="mt-4 flex flex-wrap gap-2">
                                                 <button onClick={() => generateAndShowQuiz(note)} className="text-xs bg-blue-500 hover:bg-blue-600 text-white font-semibold py-1 px-3 rounded-full transition">Create Quiz</button>
@@ -193,10 +215,10 @@ const NotesPage: React.FC<NotesPageProps> = ({ navigate }) => {
                 <div>
                     <div className="flex justify-between items-center mb-6">
                         <h2 className="text-3xl font-bold">Create a New Note</h2>
-                        <button onClick={() => setViewMode('list')} className="text-indigo-600 dark:text-indigo-400 font-semibold hover:underline">← Back to Notes</button>
+                        <button onClick={() => setViewMode('list')} className="text-indigo-600 font-semibold hover:underline">← Back to Notes</button>
                     </div>
                     
-                    <div className="bg-white dark:bg-slate-800 p-6 rounded-lg shadow-md mb-8">
+                    <div className="bg-white p-6 rounded-lg shadow-md mb-8">
                         <div className="space-y-4">
                             <div>
                                 <label htmlFor="note-title" className="block text-lg font-semibold mb-2">Note Title</label>
@@ -206,7 +228,7 @@ const NotesPage: React.FC<NotesPageProps> = ({ navigate }) => {
                                     value={manualTitle}
                                     onChange={(e) => setManualTitle(e.target.value)}
                                     placeholder="e.g., Photosynthesis Key Concepts"
-                                    className="w-full p-3 border-2 border-slate-300 dark:border-slate-600 rounded-lg bg-slate-50 dark:bg-slate-700 focus:ring-2 focus:ring-indigo-500"
+                                    className="w-full p-3 border-2 border-slate-300 rounded-lg bg-slate-50 focus:ring-2 focus:ring-indigo-500"
                                 />
                             </div>
                             <div>
@@ -217,7 +239,7 @@ const NotesPage: React.FC<NotesPageProps> = ({ navigate }) => {
                                     onChange={(e) => setManualContent(e.target.value)}
                                     placeholder="Start typing your notes here... You can use Markdown for formatting."
                                     rows={10}
-                                    className="w-full p-3 border-2 border-slate-300 dark:border-slate-600 rounded-lg bg-slate-50 dark:bg-slate-700 focus:ring-2 focus:ring-indigo-500"
+                                    className="w-full p-3 border-2 border-slate-300 rounded-lg bg-slate-50 focus:ring-2 focus:ring-indigo-500"
                                 />
                             </div>
                         </div>
@@ -227,9 +249,9 @@ const NotesPage: React.FC<NotesPageProps> = ({ navigate }) => {
                     </div>
                     
                     <div>
-                        <h3 className="text-2xl font-bold mb-4 text-center text-slate-700 dark:text-slate-300">Or use AI Note Tools</h3>
+                        <h3 className="text-2xl font-bold mb-4 text-center text-slate-700">Or use AI Note Tools</h3>
                         <div className="grid md:grid-cols-2 gap-6">
-                             <div className="bg-white dark:bg-slate-800 p-6 rounded-lg shadow-md flex flex-col items-center justify-center text-center">
+                             <div className="bg-white p-6 rounded-lg shadow-md flex flex-col items-center justify-center text-center">
                                 <h3 className="text-xl font-bold mb-4">Record Live Lecture</h3>
                                 <p className="text-slate-500 mb-4">Record audio and our AI will transcribe and organize it into a structured note.</p>
                                 <button onClick={isRecording ? stopRecording : startRecording} disabled={isLoading || (isRecording && !availableVoices)} className={`w-20 h-20 rounded-full flex items-center justify-center transition-colors ${isRecording ? 'bg-red-500 hover:bg-red-600' : 'bg-indigo-600 hover:bg-indigo-700'} disabled:bg-slate-400`}>
@@ -237,7 +259,7 @@ const NotesPage: React.FC<NotesPageProps> = ({ navigate }) => {
                                 </button>
                                 {isRecording && <p className="mt-4 text-red-500 animate-pulse">Recording... Click to stop.</p>}
                             </div>
-                            <div className="bg-white dark:bg-slate-800 p-6 rounded-lg shadow-md flex flex-col items-center justify-center text-center">
+                            <div className="bg-white p-6 rounded-lg shadow-md flex flex-col items-center justify-center text-center">
                                 <h3 className="text-xl font-bold mb-4">Upload a File</h3>
                                 <p className="text-slate-500 mb-4">Upload a .txt file and we'll convert it into an optimized note.</p>
                                 <label className="bg-indigo-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-indigo-700 transition cursor-pointer">
@@ -299,11 +321,20 @@ const NotesPage: React.FC<NotesPageProps> = ({ navigate }) => {
             )}
             {modalOpen === 'flashcards' && (
                 <div className="fixed inset-0 bg-black bg-opacity-80 z-50 flex items-center justify-center" onClick={closeModal}>
-                     <div className="bg-slate-800 text-white rounded-2xl shadow-2xl p-6 max-w-4xl w-full relative animate-fade-in" onClick={e => e.stopPropagation()}>
+                     <div className="bg-slate-800 text-white rounded-2xl shadow-2xl p-6 max-w-4xl w-full relative animate-fade-in flex flex-col h-[80vh]" onClick={e => e.stopPropagation()}>
                         <button onClick={closeModal} className="absolute top-4 right-4 text-slate-400 hover:text-white"><CloseIcon /></button>
-                        <h3 className="text-2xl font-bold mb-4 text-center">Flashcards</h3>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 h-[60vh] overflow-y-auto p-2">
+                        <h3 className="text-2xl font-bold mb-4 text-center flex-shrink-0">Flashcards</h3>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 overflow-y-auto p-2 flex-grow">
                            {flashcards.map((card, i) => <div key={i} className="bg-slate-700 p-4 rounded-lg flex flex-col justify-between"><div className="font-bold mb-2">{card.front}</div><div className="text-sm text-slate-300 pt-2 border-t border-slate-600">{card.back}</div></div>)}
+                        </div>
+                        <div className="mt-4 text-center border-t border-slate-600 pt-4 flex-shrink-0">
+                            <button
+                                onClick={handleSaveFlashcards}
+                                disabled={areFlashcardsSaved}
+                                className="bg-green-600 text-white font-semibold py-2 px-5 rounded-lg hover:bg-green-700 transition disabled:bg-green-400 disabled:cursor-not-allowed"
+                            >
+                                {areFlashcardsSaved ? 'Saved to Notes ✔' : 'Save as Note'}
+                            </button>
                         </div>
                     </div>
                 </div>

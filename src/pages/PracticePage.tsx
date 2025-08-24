@@ -1,18 +1,18 @@
 
-
 import React, { useState, useEffect, useCallback } from 'react';
 import { useLocalStorage } from '../hooks/useLocalStorage';
 import { generateQuizQuestion } from '../services/geminiService';
-import { QuizQuestion, UserStats } from '../types';
+import { Note, QuizQuestion, UserStats } from '../types';
 import XpGainToast from '../components/XpGainToast';
 import { useActivityLogger } from '../hooks/useActivityLogger';
 import { INITIAL_STATS } from '../constants';
+import { useNotification } from '../hooks/useNotification';
 
 const StatCard: React.FC<{ label: string; value: string | number; icon: string }> = ({ label, value, icon }) => (
-    <div className="bg-white dark:bg-slate-800 p-4 rounded-lg shadow-md flex items-center">
+    <div className="bg-white p-4 rounded-lg shadow-md flex items-center">
         <div className="text-3xl mr-4">{icon}</div>
         <div>
-            <div className="text-sm text-slate-500 dark:text-slate-400">{label}</div>
+            <div className="text-sm text-slate-500">{label}</div>
             <div className="text-2xl font-bold">{value}</div>
         </div>
     </div>
@@ -21,13 +21,16 @@ const StatCard: React.FC<{ label: string; value: string | number; icon: string }
 
 const PracticePage: React.FC = () => {
     const [stats, setStats] = useLocalStorage<UserStats>('userStats', INITIAL_STATS);
+    const [notes, setNotes] = useLocalStorage<Note[]>('notes', []);
     const [quiz, setQuiz] = useState<QuizQuestion | null>(null);
     const [isLoading, setIsLoading] = useState(false);
     const [feedback, setFeedback] = useState('');
     const [selectedOption, setSelectedOption] = useState<string | null>(null);
     const [isAnswered, setIsAnswered] = useState(false);
     const [showXpToast, setShowXpToast] = useState(false);
+    const [isCurrentQuestionSaved, setIsCurrentQuestionSaved] = useState(false);
     const { logActivity } = useActivityLogger();
+    const { showNotification } = useNotification();
     
     const fetchNewQuestion = useCallback(async () => {
         setIsLoading(true);
@@ -35,6 +38,7 @@ const PracticePage: React.FC = () => {
         setQuiz(null);
         setSelectedOption(null);
         setIsAnswered(false);
+        setIsCurrentQuestionSaved(false);
         // For simplicity, we'll use a fixed subject and difficulty. This can be expanded with user controls.
         const newQuiz = await generateQuizQuestion('Algebra', 'Medium');
         setQuiz(newQuiz);
@@ -72,9 +76,45 @@ const PracticePage: React.FC = () => {
         });
     };
 
+    const handleSaveQuestion = () => {
+        if (!quiz || isCurrentQuestionSaved) return;
+
+        const noteContent = `
+### Practice Question
+
+**Question:**
+${quiz.question}
+
+---
+
+**Options:**
+${quiz.options.map(opt => `- ${opt}`).join('\n')}
+
+---
+
+**Correct Answer:**
+\`${quiz.correctAnswer}\`
+
+**Your Answer:**
+\`${selectedOption}\`
+        `.trim();
+
+        const newNote: Note = {
+            id: `practice_${Date.now()}`,
+            title: `Practice: ${quiz.question.substring(0, 30)}...`,
+            subject: 'Practice',
+            content: noteContent,
+            timestamp: Date.now(),
+        };
+
+        setNotes(prevNotes => [newNote, ...prevNotes]);
+        showNotification('Question saved to Notes!', 'success');
+        setIsCurrentQuestionSaved(true);
+    };
+
     const getButtonClass = (option: string) => {
         if (!isAnswered) {
-            return 'bg-slate-100 dark:bg-slate-700 hover:bg-indigo-100 dark:hover:bg-indigo-900';
+            return 'bg-slate-100 hover:bg-indigo-100';
         }
         if (option === quiz?.correctAnswer) {
             return 'bg-green-500 text-white';
@@ -82,7 +122,7 @@ const PracticePage: React.FC = () => {
         if (option === selectedOption && option !== quiz?.correctAnswer) {
             return 'bg-red-500 text-white';
         }
-        return 'bg-slate-100 dark:bg-slate-700 opacity-60';
+        return 'bg-slate-100 opacity-60';
     };
 
     return (
@@ -96,7 +136,7 @@ const PracticePage: React.FC = () => {
                 <StatCard label="Attempted" value={stats.questionsAttempted} icon="✏️" />
             </div>
 
-            <div className="bg-white dark:bg-slate-800 p-6 rounded-lg shadow-lg min-h-[300px]">
+            <div className="bg-white p-6 rounded-lg shadow-lg min-h-[300px]">
                 {isLoading && <div className="text-center p-8">Generating a new question...</div>}
                 {quiz && !isLoading && (
                     <div>
@@ -119,14 +159,23 @@ const PracticePage: React.FC = () => {
             </div>
 
             {isAnswered && (
-                <div className="text-center mt-6">
-                    <p className={`text-lg font-semibold ${feedback.startsWith('Correct') ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>{feedback}</p>
-                    <button
-                        onClick={fetchNewQuestion}
-                        className="mt-4 bg-indigo-600 text-white font-bold py-3 px-8 rounded-lg hover:bg-indigo-700 transition"
-                    >
-                        Next Question
-                    </button>
+                <div className="text-center mt-6 space-y-4">
+                    <p className={`text-lg font-semibold ${feedback.startsWith('Correct') ? 'text-green-600' : 'text-red-600'}`}>{feedback}</p>
+                    <div className="flex justify-center items-center gap-4">
+                         <button
+                            onClick={handleSaveQuestion}
+                            disabled={isCurrentQuestionSaved}
+                            className="bg-green-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-green-700 transition disabled:bg-green-400 disabled:cursor-not-allowed"
+                        >
+                            {isCurrentQuestionSaved ? 'Saved ✔' : 'Save Question'}
+                        </button>
+                        <button
+                            onClick={fetchNewQuestion}
+                            className="bg-indigo-600 text-white font-bold py-3 px-8 rounded-lg hover:bg-indigo-700 transition"
+                        >
+                            Next Question
+                        </button>
+                    </div>
                 </div>
             )}
             <XpGainToast show={showXpToast} xp={10} onClose={() => setShowXpToast(false)} />

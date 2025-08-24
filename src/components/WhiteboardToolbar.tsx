@@ -32,7 +32,7 @@ const ToolbarButton: React.FC<{ onClick?: () => void; children: React.ReactNode;
         onClick={onClick}
         disabled={isDisabled}
         className={`p-2 rounded-full transition-colors ${
-            isActive ? 'bg-indigo-200 dark:bg-indigo-700' : 'hover:bg-slate-200 dark:hover:bg-slate-700'
+            isActive ? 'bg-indigo-200' : 'hover:bg-slate-200'
         } disabled:opacity-30 disabled:cursor-not-allowed`}
         aria-label={ariaLabel}
     >
@@ -57,7 +57,7 @@ const WhiteboardToolbar: React.FC<WhiteboardToolbarProps> = ({
   canRedo,
 }) => {
   return (
-    <div className="absolute top-2 right-2 bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm p-2 rounded-lg shadow-lg flex flex-col items-center gap-4 z-10">
+    <div className="absolute top-2 right-2 bg-white/80 backdrop-blur-sm p-2 rounded-lg shadow-lg flex flex-col items-center gap-4 z-10">
       {/* Color Palette */}
       <div className="flex flex-col gap-2" role="radiogroup" aria-label="Stroke color">
         {COLORS.map((color) => (
@@ -67,7 +67,7 @@ const WhiteboardToolbar: React.FC<WhiteboardToolbarProps> = ({
             aria-checked={!isErasing && strokeColor === color}
             onClick={() => setStrokeColor(color)}
             className={`w-8 h-8 rounded-full transition-transform hover:scale-110 border-2 ${
-              !isErasing && strokeColor === color ? 'border-indigo-500 scale-110' : 'border-slate-300 dark:border-slate-600'
+              !isErasing && strokeColor === color ? 'border-indigo-500 scale-110' : 'border-slate-300'
             }`}
             style={{ backgroundColor: color }}
             aria-label={`Set color to ${color}`}
@@ -75,7 +75,7 @@ const WhiteboardToolbar: React.FC<WhiteboardToolbarProps> = ({
         ))}
       </div>
       
-      <div className="w-full h-px bg-slate-300 dark:bg-slate-600"></div>
+      <div className="w-full h-px bg-slate-300"></div>
 
       {/* Line Width */}
       <div className="flex flex-col gap-2" role="radiogroup" aria-label="Line width">
@@ -86,16 +86,16 @@ const WhiteboardToolbar: React.FC<WhiteboardToolbarProps> = ({
             aria-checked={lineWidth === width}
             onClick={() => setLineWidth(width)}
             className={`w-8 h-8 rounded-full flex items-center justify-center transition-transform hover:scale-110 border-2 ${
-              lineWidth === width ? 'bg-slate-200 dark:bg-slate-600 border-indigo-500' : 'bg-slate-100 dark:bg-slate-700 border-transparent'
+              lineWidth === width ? 'bg-slate-200 border-indigo-500' : 'bg-slate-100 border-transparent'
             }`}
             aria-label={`Set line width to ${width} pixels`}
           >
-            <div className="rounded-full bg-slate-800 dark:bg-slate-200" style={{ width: width + 2, height: width + 2 }}></div>
+            <div className="rounded-full bg-slate-800" style={{ width: width + 2, height: width + 2 }}></div>
           </button>
         ))}
       </div>
       
-      <div className="w-full h-px bg-slate-300 dark:bg-slate-600"></div>
+      <div className="w-full h-px bg-slate-300"></div>
 
       <div className="flex flex-col gap-2">
         <ToolbarButton onClick={() => setIsErasing(!isErasing)} isActive={isErasing} ariaLabel={isErasing ? 'Switch to pen' : 'Switch to eraser'}>
@@ -109,7 +109,7 @@ const WhiteboardToolbar: React.FC<WhiteboardToolbarProps> = ({
         </ToolbarButton>
       </div>
 
-      <div className="w-full h-px bg-slate-300 dark:bg-slate-600"></div>
+      <div className="w-full h-px bg-slate-300"></div>
       
       <div className="flex flex-col gap-2">
         <ToolbarButton onClick={download} ariaLabel="Download image">

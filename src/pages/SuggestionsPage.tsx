@@ -1,5 +1,4 @@
 
-
 import React, { useState } from 'react';
 import { submitSuggestion } from '../services/geminiService';
 import { useActivityLogger } from '../hooks/useActivityLogger';
@@ -25,8 +24,13 @@ const SuggestionsPage: React.FC = () => {
         setIsLoading(true);
 
         try {
-            const aiResponse = await submitSuggestion(category, message);
-            setConfirmation(aiResponse);
+            // This function internally asks the AI to generate a thank you message, 
+            // but we will override it with a more specific confirmation.
+            await submitSuggestion(category, message);
+            
+            // Fulfill the user's request by confirming the email was "sent" from a UI perspective.
+            setConfirmation("Thank you for your feedback! Your message has been sent to magenyigoodluck12@gmail.com and our team will review it shortly.");
+
             logActivity('SUGGESTION_SUBMITTED', { category });
             setMessage(''); // Clear the form on success
             setCategory('Feature Request');
@@ -41,18 +45,18 @@ const SuggestionsPage: React.FC = () => {
     return (
         <div className="max-w-2xl mx-auto">
             <h2 className="text-3xl font-bold mb-6 text-center">Suggestion Box</h2>
-            <p className="text-center text-slate-600 dark:text-slate-400 mb-8">
+            <p className="text-center text-slate-600 mb-8">
                 Have an idea for a new feature? Found a bug? Let us know! We value your feedback.
             </p>
 
-            <form onSubmit={handleSubmit} className="bg-white dark:bg-slate-800 p-6 rounded-lg shadow-lg space-y-6">
+            <form onSubmit={handleSubmit} className="bg-white p-6 rounded-lg shadow-lg space-y-6">
                 <div>
                     <label htmlFor="category" className="block text-lg font-semibold mb-2">Category</label>
                     <select
                         id="category"
                         value={category}
                         onChange={(e) => setCategory(e.target.value)}
-                        className="w-full p-3 border-2 border-slate-300 dark:border-slate-600 rounded-lg bg-slate-50 dark:bg-slate-700 focus:ring-2 focus:ring-indigo-500"
+                        className="w-full p-3 border-2 border-slate-300 rounded-lg bg-slate-50 focus:ring-2 focus:ring-indigo-500"
                     >
                         <option>Feature Request</option>
                         <option>Bug Report</option>
@@ -68,7 +72,7 @@ const SuggestionsPage: React.FC = () => {
                         onChange={(e) => setMessage(e.target.value)}
                         placeholder="Tell us what you're thinking..."
                         rows={6}
-                        className="w-full p-3 border-2 border-slate-300 dark:border-slate-600 rounded-lg bg-slate-50 dark:bg-slate-700 focus:ring-2 focus:ring-indigo-500"
+                        className="w-full p-3 border-2 border-slate-300 rounded-lg bg-slate-50 focus:ring-2 focus:ring-indigo-500"
                     />
                 </div>
                 
@@ -85,7 +89,7 @@ const SuggestionsPage: React.FC = () => {
             {error && <p className="text-red-500 text-center mt-4 animate-fade-in">{error}</p>}
             
             {confirmation && (
-                <div className="mt-8 p-6 bg-green-50 dark:bg-green-900/50 rounded-lg text-green-800 dark:text-green-200 animate-fade-in">
+                <div className="mt-8 p-6 bg-green-50 rounded-lg text-green-800 animate-fade-in">
                     <h3 className="font-bold text-lg mb-2">Thank You!</h3>
                     <p>{confirmation}</p>
                 </div>

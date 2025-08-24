@@ -1,4 +1,5 @@
 
+
 import React, { useState, useEffect, useRef } from 'react';
 import { useLocalStorage } from '../hooks/useLocalStorage';
 import { ChatMessage } from '../types';
@@ -20,7 +21,7 @@ const MarkdownRenderer: React.FC<{ content: string; isStreaming?: boolean }> = (
       // Bold text
       line = line.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
       // Code blocks (simple)
-      line = line.replace(/`(.*?)`/g, '<code class="bg-slate-200 dark:bg-slate-600 px-1 rounded-sm">$1</code>');
+      line = line.replace(/`(.*?)`/g, '<code class="bg-slate-200 px-1 rounded-sm">$1</code>');
       
       // Basic list items
       if (line.trim().startsWith('* ')) {
@@ -32,9 +33,9 @@ const MarkdownRenderer: React.FC<{ content: string; isStreaming?: boolean }> = (
   };
 
   return (
-    <div className="prose prose-slate dark:prose-invert max-w-none">
+    <div className="prose prose-slate max-w-none">
       {renderContent()}
-      {isStreaming && <span className="inline-block w-2 h-4 bg-slate-700 dark:bg-slate-300 animate-pulse ml-1 align-bottom"></span>}
+      {isStreaming && <span className="inline-block w-2 h-4 bg-slate-700 animate-pulse ml-1 align-bottom"></span>}
     </div>
   );
 };
@@ -107,8 +108,8 @@ const AiTutorPage: React.FC = () => {
 
 
   return (
-    <div className="flex flex-col h-full max-w-4xl mx-auto bg-white dark:bg-slate-800 rounded-lg shadow-lg">
-      <div className="p-4 border-b border-slate-200 dark:border-slate-700 flex justify-between items-center">
+    <div className="flex flex-col h-full max-w-4xl mx-auto bg-white rounded-lg shadow-lg">
+      <div className="p-4 border-b border-slate-200 flex justify-between items-center">
         <h2 className="text-xl font-bold">AI Tutor</h2>
         <button 
             onClick={handleClearChat}
@@ -123,7 +124,7 @@ const AiTutorPage: React.FC = () => {
         {messages.map((message, index) => (
           <div key={index} className={`flex items-start gap-3 ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}>
             {message.role === 'model' && <AiIcon />}
-            <div className={`max-w-xl p-3 rounded-lg shadow ${message.role === 'user' ? 'bg-indigo-500 text-white' : 'bg-slate-100 dark:bg-slate-700'}`}>
+            <div className={`max-w-xl p-3 rounded-lg shadow ${message.role === 'user' ? 'bg-indigo-500 text-white' : 'bg-slate-100'}`}>
               <MarkdownRenderer 
                 content={message.content}
                 isStreaming={isLoading && index === messages.length - 1}
@@ -135,7 +136,7 @@ const AiTutorPage: React.FC = () => {
         <div ref={messagesEndRef} />
       </div>
 
-      <div className="p-4 border-t border-slate-200 dark:border-slate-700">
+      <div className="p-4 border-t border-slate-200">
         <form onSubmit={handleSend} className="flex items-center gap-3">
           <textarea
             value={input}
@@ -147,7 +148,7 @@ const AiTutorPage: React.FC = () => {
               }
             }}
             placeholder="Ask me anything..."
-            className="flex-1 p-3 border-2 border-slate-300 dark:border-slate-600 rounded-lg bg-slate-50 dark:bg-slate-900 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition resize-none"
+            className="flex-1 p-3 border-2 border-slate-300 rounded-lg bg-slate-50 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition resize-none"
             rows={1}
             style={{ maxHeight: '150px' }}
             disabled={isLoading}

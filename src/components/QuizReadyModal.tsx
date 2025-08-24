@@ -1,4 +1,5 @@
 
+
 import React from 'react';
 
 interface QuizReadyModalProps {
@@ -30,7 +31,7 @@ const QuizReadyModal: React.FC<QuizReadyModalProps> = ({ isOpen, onClose, onBegi
         onClick={onClose}
     >
         <div 
-            className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl p-8 max-w-sm w-full text-center transform transition-all animate-fade-in"
+            className="bg-white rounded-2xl shadow-2xl p-8 max-w-sm w-full text-center transform transition-all animate-fade-in"
             onClick={(e) => e.stopPropagation()}
         >
             <div className="animate-bounce mb-6">
@@ -38,7 +39,7 @@ const QuizReadyModal: React.FC<QuizReadyModalProps> = ({ isOpen, onClose, onBegi
             </div>
 
             <h2 className="text-3xl font-bold mb-4">Quiz is Ready!</h2>
-            <p className="text-slate-600 dark:text-slate-400 mb-8">
+            <p className="text-slate-600 mb-8">
                 Test your knowledge on the concepts from your note.
             </p>
 
@@ -51,7 +52,7 @@ const QuizReadyModal: React.FC<QuizReadyModalProps> = ({ isOpen, onClose, onBegi
                 </button>
                 <button
                     onClick={onClose}
-                    className="w-full bg-slate-200 dark:bg-slate-700 text-slate-800 dark:text-slate-200 font-bold py-3 px-6 rounded-lg hover:bg-slate-300 dark:hover:bg-slate-600 transition"
+                    className="w-full bg-slate-200 text-slate-800 font-bold py-3 px-6 rounded-lg hover:bg-slate-300 transition"
                 >
                     Maybe Later
                 </button>

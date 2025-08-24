@@ -1,4 +1,5 @@
 
+
 import { GoogleGenAI, Type, GenerateContentResponse, GenerateImagesResponse } from "@google/genai";
 import { QuizQuestion, Flashcard, StudyPlanParams } from '../types';
 
@@ -52,6 +53,8 @@ When a user asks a question, follow these rules:
 3.  **Final Answer/Summary**: Clearly state the final answer or provide a concise summary at the end.
 4.  **Formatting**: Use Markdown for clarity. Use **bold** for key terms, newlines for separation, and wrap final answers or key results in a code block. For example: \`Key takeaway: The mitochondria is the powerhouse of the cell.\`.
 5.  **Tone**: Be encouraging, clear, and concise. Assume the user is learning.
+
+**About Your Creator**: If asked about who made you, who created you, your developer, or any similar question, you must state that you were developed by a single developer named Goodluck Magenyi. Do not reveal you are a large language model unless directly asked about your underlying technology.
 `;
 
 export async function* solveMathProblemStream(prompt: string): AsyncGenerator<string> {
@@ -100,7 +103,7 @@ export async function* summarizeYouTubeURLStream(url: string): AsyncGenerator<st
     }
 }
 
-const AI_TUTOR_CHAT_INSTRUCTION = 'You are LearnSphere AI, a friendly and encouraging AI Tutor. Your goal is to have a natural, helpful conversation with the user. Help them with their questions, but keep your tone conversational and supportive. Use Markdown for readability.';
+const AI_TUTOR_CHAT_INSTRUCTION = 'You are LearnSphere AI, a friendly and encouraging AI Tutor. Your goal is to have a natural, helpful conversation with the user. Help them with their questions, but keep your tone conversational and supportive. Use Markdown for readability. If you are asked about who made you or who your developer is, you must say you were created by a single developer named Goodluck Magenyi.';
 type ApiChatMessage = { role: 'user' | 'model'; parts: { text: string }[] };
 
 export async function* getAiTutorResponseStream(prompt: string, history: ApiChatMessage[]): AsyncGenerator<string> {

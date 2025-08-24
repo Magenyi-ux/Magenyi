@@ -1,5 +1,6 @@
 
 
+
 import React from 'react';
 
 type SolverMode = 'text' | 'whiteboard' | 'visual';
@@ -11,11 +12,11 @@ interface SolverTabsProps {
 
 const SolverTabs: React.FC<SolverTabsProps> = ({ activeTab, onTabChange }) => {
   const tabStyles = "flex-1 py-3 text-center font-semibold cursor-pointer transition-colors duration-200";
-  const activeStyles = "text-indigo-600 dark:text-indigo-400 border-b-2 border-indigo-600 dark:border-indigo-400";
-  const inactiveStyles = "text-slate-500 hover:text-slate-700 dark:hover:text-slate-300";
+  const activeStyles = "text-black border-b-2 border-black";
+  const inactiveStyles = "text-slate-500 hover:text-slate-700";
 
   return (
-    <div className="flex border-b border-slate-200 dark:border-slate-700 mb-6">
+    <div className="flex border-b border-slate-200 mb-6">
       <button
         onClick={() => onTabChange('text')}
         className={`${tabStyles} ${activeTab === 'text' ? activeStyles : inactiveStyles}`}

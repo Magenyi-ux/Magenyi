@@ -1,4 +1,5 @@
 
+
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useLocalStorage } from '../hooks/useLocalStorage';
 import { useTheme } from '../hooks/useTheme';
@@ -33,18 +34,13 @@ const SolverPage: React.FC = () => {
   const [visualQuestion, setVisualQuestion] = useState('');
 
   // Whiteboard states
-  const [strokeColor, setStrokeColor] = useState(theme === 'dark' ? '#f1f5f9' : '#0f172a');
+  const [strokeColor, setStrokeColor] = useState('#0f172a');
   const [lineWidth, setLineWidth] = useState(3);
   const [isWhiteboardFullscreen, setIsWhiteboardFullscreen] = useState(false);
   const [resizeTrigger, setResizeTrigger] = useState(0);
   const [isErasing, setIsErasing] = useState(false);
   const [historyState, setHistoryState] = useState({ canUndo: false, canRedo: false });
 
-  useEffect(() => {
-    if (strokeColor === '#0f172a' && theme === 'dark') setStrokeColor('#f1f5f9');
-    else if (strokeColor === '#f1f5f9' && theme === 'light') setStrokeColor('#0f172a');
-  }, [theme, strokeColor]);
-  
   const handleSetStrokeColor = useCallback((color: string) => {
     setStrokeColor(color);
     setIsErasing(false);
@@ -167,8 +163,8 @@ const SolverPage: React.FC = () => {
   };
 
   const whiteboardContainerClasses = isWhiteboardFullscreen
-    ? "fixed inset-0 bg-white dark:bg-slate-800 z-50 p-4"
-    : "relative w-full h-80 bg-white dark:bg-slate-800 rounded-lg shadow-inner mb-4";
+    ? "fixed inset-0 bg-white z-50 p-4"
+    : "relative w-full h-80 bg-white rounded-lg shadow-inner mb-4";
 
   return (
     <div className="max-w-4xl mx-auto">
@@ -177,7 +173,7 @@ const SolverPage: React.FC = () => {
       {mode === 'text' && (
         <div>
           <textarea value={inputValue} onChange={(e) => setInputValue(e.target.value)} placeholder="Type your question here..."
-            className="w-full p-4 border-2 border-slate-300 dark:border-slate-600 rounded-lg bg-slate-50 dark:bg-slate-800 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition h-40"
+            className="w-full p-4 border-2 border-slate-300 rounded-lg bg-slate-50 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition h-40"
           />
           <button onClick={handleTextSolve} disabled={isLoading} className="mt-4 w-full bg-indigo-600 text-white font-bold py-3 px-6 rounded-lg hover:bg-indigo-700 transition disabled:bg-indigo-400 disabled:cursor-not-allowed">
             {isLoading ? 'Thinking...' : 'Get Answer'}
@@ -204,7 +200,7 @@ const SolverPage: React.FC = () => {
 
       {mode === 'visual' && (
         <div>
-            <div className="w-full h-64 border-2 border-dashed border-slate-400 dark:border-slate-600 rounded-lg flex items-center justify-center bg-slate-50 dark:bg-slate-800 mb-4 relative">
+            <div className="w-full h-64 border-2 border-dashed border-slate-400 rounded-lg flex items-center justify-center bg-slate-50 mb-4 relative">
                 <input type="file" accept="image/*" onChange={handleImageUpload} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" />
                 {visualImage ? (
                     <img src={visualImage.dataUrl} alt="Preview" className="h-full w-full object-contain rounded-lg p-2" />
@@ -215,7 +211,7 @@ const SolverPage: React.FC = () => {
                     </div>
                 )}
             </div>
-            <textarea value={visualQuestion} onChange={e => setVisualQuestion(e.target.value)} placeholder="Ask a question about the image..." className="w-full p-4 border-2 border-slate-300 dark:border-slate-600 rounded-lg bg-slate-50 dark:bg-slate-800 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition h-24" />
+            <textarea value={visualQuestion} onChange={e => setVisualQuestion(e.target.value)} placeholder="Ask a question about the image..." className="w-full p-4 border-2 border-slate-300 rounded-lg bg-slate-50 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition h-24" />
             <button onClick={handleVisualSolve} disabled={isLoading || !visualImage || !visualQuestion.trim()} className="mt-4 w-full bg-indigo-600 text-white font-bold py-3 px-6 rounded-lg hover:bg-indigo-700 transition disabled:bg-indigo-400 disabled:cursor-not-allowed">
                 {isLoading ? 'Thinking...' : 'Get Answer'}
             </button>

@@ -1,4 +1,5 @@
 
+
 import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { Page, UserStats } from './types';
 import { NAV_ITEMS, INITIAL_STATS } from './constants';
@@ -164,7 +165,7 @@ const AppContent: React.FC = () => {
   };
 
   useEffect(() => {
-    document.body.className = `${theme} bg-slate-100 dark:bg-slate-900 text-slate-900 dark:text-slate-100 transition-colors duration-300`;
+    document.body.className = `bg-slate-100 text-black transition-colors duration-300`;
   }, [theme]);
   
   if (!hasCompletedSetup) {
@@ -206,7 +207,7 @@ const AppRouter: React.FC = () => {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-slate-100 dark:bg-slate-900">
+      <div className="flex items-center justify-center min-h-screen bg-slate-100">
         <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-indigo-500"></div>
       </div>
     );
