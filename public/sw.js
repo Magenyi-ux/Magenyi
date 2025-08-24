@@ -1,4 +1,5 @@
 
+
 const CACHE_NAME = 'learnsphere-ai-v3';
 // This list contains the core assets for the application shell.
 // It is manually curated. The application's bundled code (JS/CSS)
@@ -17,12 +18,7 @@ const STATIC_ASSETS = [
     '/vite.svg',
     
     // External Dependencies (CDN)
-    'https://cdn.tailwindcss.com',
-    'https://esm.sh/react@19.1.1',
-    'https://esm.sh/react-dom@19.1.1/client',
-    'https://esm.sh/react@19.1.1/jsx-runtime',
-    'https://esm.sh/@google/genai@1.15.0',
-    'https://esm.sh/three@0.179.1'
+    'https://cdn.tailwindcss.com'
 ];
 
 // Install event: cache the app shell and critical assets
